@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Waypoint — Vacation Intelligence</title>
+<meta name="description" content="A decision advisor that figures out where you should go — and shows its work.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0B2530;          /* deep sea ink */
+  --ink-soft:#3A5560;
+  --paper:#F2F6F5;        /* sea-glass */
+  --card:#FFFFFF;
+  --lagoon:#1F6E5E;       /* primary action */
+  --lagoon-deep:#155246;
+  --saffron:#E9A13B;      /* accent */
+  --board-amber:#FFC46B;  /* departures board text */
+  --board-dim:#8FA6A0;
+  --mist:#DCE6E3;         /* hairlines */
+  --good:#1F6E5E;
+  --warn:#B4690E;
+  --bad:#A3402F;
+  --radius:14px;
+  --disp:'Sora',system-ui,sans-serif;
+  --body:'IBM Plex Sans',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation-duration:.001s!important;transition-duration:.001s!important}
+}
+body{font-family:var(--body);background:var(--paper);color:var(--ink);line-height:1.55;-webkit-font-smoothing:antialiased}
+button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--saffron);outline-offset:2px;border-radius:6px}
+::selection{background:var(--saffron);color:var(--ink)}
+
+/* ---------- shared ---------- */
+.wrap{max-width:1160px;margin:0 auto;padding:0 20px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft)}
+.tag{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;padding:2px 7px;border-radius:4px;vertical-align:2px;white-space:nowrap}
+.tag.fact{background:#E2EEE9;color:var(--lagoon-deep)}
+.tag.est{background:#FBEFD9;color:#8A5A10}
+.tag.assume{background:#EEE7F5;color:#5C4580}
+.tag.you{background:#E4ECF6;color:#2C4E77}
+.btn{display:inline-flex;align-items:center;gap:8px;font-family:var(--disp);font-weight:600;font-size:15px;padding:13px 24px;border-radius:999px;transition:transform .15s ease,box-shadow .15s ease,background .15s ease}
+.btn-primary{background:var(--lagoon);color:#fff;box-shadow:0 6px 18px rgba(21,82,70,.28)}
+.btn-primary:hover{background:var(--lagoon-deep);transform:translateY(-1px)}
+.btn-ghost{color:var(--ink-soft);font-weight:500;padding:10px 14px}
+.btn-ghost:hover{color:var(--ink)}
+.hidden{display:none!important}
+
+/* ---------- hero ---------- */
+.hero{background:var(--ink);color:#EAF2F0;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;left:0;right:0;bottom:0;height:190px;pointer-events:none;
+  background:radial-gradient(120% 140% at 50% 118%, rgba(233,161,59,.34), rgba(31,110,94,.16) 46%, transparent 72%);
+  animation:horizon 9s ease-in-out infinite alternate}
+@keyframes horizon{from{opacity:.55;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.hero-inner{position:relative;z-index:1;padding:72px 0 88px;text-align:left}
+.hero .eyebrow{color:var(--board-amber)}
+.hero h1{font-family:var(--disp);font-weight:700;font-size:clamp(38px,6.4vw,64px);line-height:1.06;letter-spacing:-.02em;margin:18px 0 18px;max-width:13ch}
+.hero h1 em{font-style:normal;color:var(--board-amber)}
+.hero p.lede{font-size:clamp(16px,2.2vw,19px);color:#B9CCC7;max-width:52ch;margin-bottom:34px}
+.hero-principles{display:flex;gap:26px;flex-wrap:wrap;margin-top:46px}
+.hero-principles div{max-width:230px}
+.hero-principles b{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--board-amber);margin-bottom:5px}
+.hero-principles span{font-size:13.5px;color:#9FB6B0}
+
+/* ---------- intake ---------- */
+.intake{padding:60px 0 80px}
+.intake-card{background:var(--card);border:1px solid var(--mist);border-radius:20px;max-width:640px;margin:0 auto;padding:36px 34px 30px;box-shadow:0 14px 40px rgba(11,37,48,.07)}
+.steps-dots{display:flex;gap:7px;margin-bottom:26px}
+.steps-dots button{width:30px;height:9px;border-radius:5px;background:var(--mist);transition:all .2s;padding:0}
+.steps-dots button.done{background:var(--lagoon);cursor:pointer}
+.steps-dots button.cur{outline:2px solid var(--ink);outline-offset:2px}
+.steps-dots button:disabled{cursor:default;opacity:.75}
+.steps-dots button.done:hover{transform:scaleY(1.5)}
+.q-title{font-family:var(--disp);font-weight:600;font-size:clamp(21px,3vw,26px);letter-spacing:-.01em;margin:6px 0 6px}
+.q-why{font-size:13.5px;color:var(--ink-soft);margin-bottom:22px}
+.q-why .tag{margin-left:6px}
+.chips{display:flex;flex-wrap:wrap;gap:10px}
+.chip{border:1.5px solid var(--mist);background:#FBFDFC;border-radius:999px;padding:10px 18px;font-size:14.5px;font-weight:500;transition:all .15s}
+.chip:hover{border-color:var(--lagoon);color:var(--lagoon-deep)}
+.chip.on{background:var(--lagoon);border-color:var(--lagoon);color:#fff}
+.chip small{display:block;font-size:11px;font-weight:400;opacity:.75}
+.intake-nav{display:flex;justify-content:space-between;align-items:center;margin-top:30px;border-top:1px solid var(--mist);padding-top:18px}
+.skip-note{font-size:12.5px;color:var(--ink-soft)}
+.slider-row{margin:18px 0 8px}
+.slider-row .sl-head{display:flex;justify-content:space-between;font-size:13.5px;margin-bottom:6px}
+.slider-row .sl-head b{font-weight:600}
+.slider-row .sl-head span{font-family:var(--mono);font-size:11px;color:var(--ink-soft)}
+input[type=range]{width:100%;accent-color:var(--lagoon);height:26px}
+.est-note{font-size:12px;color:var(--ink-soft);margin-top:2px}
+
+/* ---------- results shell ---------- */
+.results{padding:46px 0 90px}
+.results-head{display:flex;align-items:baseline;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:22px}
+.results-head h2{font-family:var(--disp);font-weight:700;font-size:clamp(24px,3.6vw,34px);letter-spacing:-.015em}
+.conf-pill{font-family:var(--mono);font-size:12px;background:var(--card);border:1px solid var(--mist);border-radius:999px;padding:8px 14px;color:var(--ink-soft)}
+.conf-pill b{color:var(--lagoon-deep)}
+.results-grid{display:grid;grid-template-columns:400px 1fr;gap:26px;align-items:start}
+@media(max-width:920px){.results-grid{grid-template-columns:1fr}}
+
+/* ---------- departures board (signature) ---------- */
+.board{background:var(--ink);border-radius:18px;padding:20px 16px 14px;box-shadow:0 18px 44px rgba(11,37,48,.25)}
+.board-head{display:flex;justify-content:space-between;align-items:center;padding:0 8px 12px;border-bottom:1px solid rgba(255,196,107,.22)}
+.board-head span{font-family:var(--mono);font-size:10.5px;letter-spacing:.22em;color:var(--board-amber)}
+.board-head .blink{animation:blink 1.6s steps(1) infinite}
+@keyframes blink{50%{opacity:.25}}
+.board-list{list-style:none;margin-top:6px}
+.board-row{display:grid;grid-template-columns:30px 1fr auto auto;gap:10px;align-items:center;padding:11px 8px;border-radius:10px;width:100%;text-align:left;font-family:var(--mono);transition:background .15s;position:relative}
+.board-row:hover{background:rgba(255,255,255,.06)}
+.board-row.sel{background:rgba(255,196,107,.12)}
+.board-row .rk{font-size:12px;color:var(--board-dim)}
+.board-row .nm{font-size:13.5px;color:#EAF2F0;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.board-row .nm small{display:block;font-size:10px;color:var(--board-dim);letter-spacing:.06em}
+.board-row .sc{font-size:14px;color:var(--board-amber);font-weight:500}
+.board-row .dl{font-size:10.5px;width:34px;text-align:right}
+.dl.up{color:#6FD3A8}.dl.dn{color:#E58A78}.dl.eq{color:var(--board-dim)}
+.board-foot{font-family:var(--mono);font-size:10px;color:var(--board-dim);padding:10px 8px 2px;letter-spacing:.06em}
+
+/* ---------- what-if dock ---------- */
+.dock{background:var(--card);border:1px solid var(--mist);border-radius:18px;padding:20px;margin-top:20px;position:sticky;top:16px}
+.dock h3{font-family:var(--disp);font-size:16px;font-weight:600;margin-bottom:2px}
+.dock .sub{font-size:12.5px;color:var(--ink-soft);margin-bottom:14px}
+.dock .row{margin-bottom:12px}
+.dock label{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:5px}
+.big-select{width:100%;font:inherit;font-size:15px;padding:12px;border:1.5px solid var(--mist);border-radius:12px;background:#FBFDFC;color:var(--ink)}
+.dock-geo{font-family:var(--mono);font-size:11px;color:var(--lagoon-deep);margin-top:6px;letter-spacing:.04em}
+.dock-geo:hover{text-decoration:underline}
+.dock select{width:100%;font:inherit;font-size:14px;padding:9px 10px;border:1.5px solid var(--mist);border-radius:10px;background:#FBFDFC;color:var(--ink)}
+.dock .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.dock .sl-val{float:right;font-family:var(--mono);font-size:11px;color:var(--lagoon-deep)}
+.toggle{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:500;padding:6px 0}
+.toggle input{width:18px;height:18px;accent-color:var(--lagoon)}
+
+/* ---------- detail card ---------- */
+.detail{background:var(--card);border:1px solid var(--mist);border-radius:20px;overflow:hidden;box-shadow:0 14px 40px rgba(11,37,48,.06)}
+.detail-hero{padding:30px 30px 22px;border-bottom:1px solid var(--mist);background:linear-gradient(180deg,#FDFEFE, #F6FAF9)}
+.d-top{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start}
+.d-top h2{font-family:var(--disp);font-weight:700;font-size:clamp(26px,4vw,36px);letter-spacing:-.02em;line-height:1.1}
+.d-top .cty{font-size:14px;color:var(--ink-soft);margin-top:2px}
+.pick-badge{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;background:var(--ink);color:var(--board-amber);padding:6px 12px;border-radius:6px}
+.d-verdict{margin-top:14px;font-size:15.5px;max-width:62ch}
+.meter{margin-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:520px}
+.meter .m-lab{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--ink-soft);margin-bottom:5px}
+.meter .m-lab b{color:var(--ink)}
+.bar{height:8px;background:var(--mist);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--lagoon),#3E9B87);transition:width .6s cubic-bezier(.2,.8,.2,1)}
+.bar.amber i{background:linear-gradient(90deg,#C9821F,var(--saffron))}
+.d-body{padding:26px 30px 30px}
+.why{margin-bottom:24px}
+.why h4{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--lagoon-deep);margin-bottom:9px}
+.why ul{list-style:none}
+.why li{font-size:14.8px;padding:7px 0 7px 22px;position:relative;border-bottom:1px dashed var(--mist)}
+.why li:last-child{border-bottom:none}
+.why li::before{content:"—";position:absolute;left:0;color:var(--saffron);font-weight:600}
+.why li.warn::before{content:"!";color:var(--warn)}
+.why li.warn{color:#6E4A15}
+.breakdown{margin:6px 0 26px}
+.bk-row{display:grid;grid-template-columns:150px 1fr 52px;gap:12px;align-items:center;padding:5px 0;font-size:13px}
+.bk-row .lbl{color:var(--ink-soft)}
+.bk-row .pts{font-family:var(--mono);font-size:11.5px;text-align:right;color:var(--ink)}
+.bk-bar{height:7px;background:var(--mist);border-radius:99px;overflow:hidden}
+.bk-bar i{display:block;height:100%;background:var(--lagoon);border-radius:99px;transition:width .6s cubic-bezier(.2,.8,.2,1)}
+.bk-bar i.neg{background:var(--bad)}
+.fb{display:flex;gap:10px;flex-wrap:wrap;border-top:1px solid var(--mist);padding-top:18px}
+.fb span{font-size:12.5px;color:var(--ink-soft);align-self:center;margin-right:4px}
+.fb button{border:1.5px solid var(--mist);border-radius:999px;padding:8px 16px;font-size:13px;font-weight:500;transition:all .15s}
+.fb button:hover{border-color:var(--lagoon)}
+.fb button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.assume-box{background:#F6F3FA;border:1px solid #E4DBEF;border-radius:14px;padding:16px 18px;margin-top:22px;font-size:13.5px}
+.assume-box b{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#5C4580;display:block;margin-bottom:8px}
+.assume-box li{margin-left:18px;padding:2px 0;color:#4A3A63}
+footer{padding:34px 0 50px;text-align:center;font-size:12.5px;color:var(--ink-soft)}
+footer .wrap{border-top:1px solid var(--mist);padding-top:24px}
+/* ---------- v2: pipeline console ---------- */
+.pipe{background:var(--ink);border-radius:18px;padding:22px 20px;margin:26px auto 0;max-width:760px;box-shadow:0 18px 44px rgba(11,37,48,.25)}
+.pipe-head{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;color:var(--board-amber);padding-bottom:12px;border-bottom:1px solid rgba(255,196,107,.22)}
+.pipe-log{list-style:none;margin-top:10px;max-height:340px;overflow:auto}
+.pipe-log li{font-family:var(--mono);font-size:12.5px;color:#C9D8D4;padding:7px 4px;display:flex;gap:10px;align-items:baseline;border-bottom:1px dashed rgba(255,255,255,.06)}
+.pipe-log li b{color:var(--board-amber);font-weight:500}
+.pipe-log .st{width:16px;text-align:center}
+.pipe-log .ok{color:#6FD3A8}.pipe-log .run{color:var(--board-amber);animation:blink 1.1s steps(1) infinite}.pipe-log .er{color:#E58A78}
+.mode-ic{font-size:11px;margin-right:2px}
+.badge-live{font-family:var(--mono);font-size:9px;letter-spacing:.1em;background:#173B33;color:#7FE0B4;border:1px solid #2C6B58;padding:2px 6px;border-radius:4px;vertical-align:2px}
+.budget{margin:6px 0 26px}
+.bg-row{display:grid;grid-template-columns:150px 1fr 150px;gap:12px;align-items:center;padding:6px 0;font-size:13px}
+.bg-row .lbl{color:var(--ink-soft)}
+.bg-row .rng{font-family:var(--mono);font-size:11.5px;text-align:right;white-space:nowrap}
+.bg-bar{height:14px;background:var(--mist);border-radius:99px;position:relative;overflow:hidden}
+.bg-bar i{position:absolute;top:0;bottom:0;background:linear-gradient(90deg,#2E7D6B,#63B49F);border-radius:99px;transition:left .5s,right .5s}
+.bg-total{display:flex;justify-content:space-between;align-items:baseline;border-top:2px solid var(--ink);margin-top:10px;padding-top:10px}
+.bg-total b{font-family:var(--disp);font-size:20px}
+.bg-total span{font-family:var(--mono);font-size:11px;color:var(--ink-soft)}
+.holiday-tip{background:#FFF7E8;border:1px solid #F0DDB4;border-radius:14px;padding:14px 16px;margin:18px 0;font-size:13.5px;color:#6E4A15}
+.holiday-tip b{font-family:var(--mono);font-size:10px;letter-spacing:.14em;display:block;margin-bottom:5px;color:#8A5A10}
+.origin-box{position:relative}
+.origin-hits{list-style:none;border:1.5px solid var(--mist);border-radius:12px;margin-top:8px;overflow:hidden}
+.origin-hits button{width:100%;text-align:left;padding:11px 14px;font-size:14px;border-bottom:1px solid var(--mist);background:#FBFDFC}
+.origin-hits button:hover{background:#EFF6F3}
+.origin-hits small{display:block;color:var(--ink-soft);font-size:11.5px}
+.dd-btn{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;border:1px solid rgba(255,196,107,.4);color:var(--board-amber);border-radius:6px;padding:3px 8px}
+.dd-btn:hover{background:rgba(255,196,107,.12)}
+.stale{font-family:var(--mono);font-size:10px;color:var(--warn);letter-spacing:.06em}
+.setup{background:#FDF3EC;border:1px solid #EBCDB6;border-radius:16px;padding:18px 20px;margin:20px auto 0;max-width:760px;font-size:13.5px;color:#7A4A22}
+.setup code{font-family:var(--mono);font-size:12px;background:#F6E3D3;padding:1px 5px;border-radius:4px}
+.tag.ai{background:#E9E4F7;color:#4B3A7A}
+.magic{background:linear-gradient(135deg,#0B2530,#143B44);color:#DCEAE6;border-radius:18px;padding:18px 20px;max-width:640px;margin:0 auto 18px;box-shadow:0 14px 40px rgba(11,37,48,.18)}
+.magic h4{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;color:var(--board-amber);margin-bottom:8px}
+.magic textarea{width:100%;font:inherit;font-size:15px;border:1.5px solid rgba(255,255,255,.18);border-radius:12px;background:rgba(255,255,255,.06);color:#EAF2F0;padding:11px 12px;resize:vertical;min-height:52px}
+.magic .est-note{color:#9FB6B0}
+.prog{height:6px;background:rgba(255,255,255,.12);border-radius:99px;overflow:hidden;margin-top:10px}
+.prog i{display:block;height:100%;width:0;background:var(--board-amber);transition:width .3s}
+input.txt{width:100%;font:inherit;font-size:16px;padding:13px 14px;border:1.5px solid var(--mist);border-radius:12px;background:#FBFDFC;color:var(--ink)}
+</style>
+</head>
+<body>
+
+<!-- ================= HERO ================= -->
+<header class="hero">
+  <div class="wrap hero-inner">
+    <span class="eyebrow">Waypoint · Vacation Intelligence · free time-aware engine</span>
+    <h1>Don't search for a trip. <em>Decide</em> one.</h1>
+    <p class="lede">Tell Waypoint where you're starting from — any town on Earth. It <b>discovers</b> candidates, weighs the <b>time you actually have</b> against the time each place deserves, checks <b>real weather</b> for your month, your <b>holiday calendar</b>, and prices the whole trip — then ranks everything around your budget, pace and comfort. Completely free. No login. Nothing you enter is stored on any server — your trip stays on your device.</p>
+    <button class="btn btn-primary" onclick="startIntake()">Start deciding →</button>
+    <div class="hero-principles">
+      <div><b>Time is the real constraint</b><span>We weigh the days you have against the days a place deserves, and the journey each way. If travel would eat your trip, we say so — and how many extra days unlock it.</span></div>
+      <div><b>Ranked around you</b><span>Season, your interests, price sensitivity, pace, comfort, adventure appetite, crowds and family fit — every candidate scored on all of it, and shown the maths.</span></div>
+      <div><b>How you'd get there, and what it costs</b><span>Drive, train or fly — with the overnight-train trick that saves a hotel night — and an end-to-end budget in your own currency.</span></div>
+      <div><b>Private and free</b><span>No login, no tracking, nothing stored on a server. Everything runs in your browser.</span></div>
+    </div>
+  </div>
+</header>
+
+<!-- ================= INTAKE ================= -->
+<section class="intake hidden" id="intake"><div class="wrap"><div id="magicCard"></div><div class="intake-card" id="intakeCard"></div></div></section>
+
+<!-- ================= PIPELINE ================= -->
+<section class="intake hidden" id="pipeline"><div class="wrap">
+  <div class="pipe"><div class="pipe-head"><span>DECISION PIPELINE</span><span class="blink">● WORKING</span></div>
+  <ul class="pipe-log" id="pipeLog"></ul></div>
+  <div id="setupNote"></div>
+</div></section>
+
+<!-- ================= RESULTS ================= -->
+<section class="results hidden" id="results">
+  <div class="wrap">
+    <div class="results-head">
+      <h2>Where you should go</h2>
+      <span class="conf-pill" id="confPill"></span>
+      <button class="conf-pill" onclick="shareLink()" style="cursor:pointer" title="Copy a share link to this search">🔗 Share this search</button>
+    </div>
+    <div class="results-grid">
+      <div>
+        <div class="board">
+          <div class="board-head"><span>RANKED · SUITABILITY</span><span class="blink">● LIVE</span></div>
+          <ul class="board-list" id="boardList"></ul>
+          <div class="board-foot" id="boardFoot">SCORES RE-COMPUTE INSTANTLY WHEN ASSUMPTIONS CHANGE</div>
+        </div>
+        <div class="dock" id="dock"></div>
+      </div>
+      <div class="detail" id="detail"></div>
+    </div>
+  </div>
+</section>
+
+<footer><div class="wrap" id="footNote">Waypoint · Geocoding © OpenStreetMap contributors · Guides &amp; photos: Wikipedia / Wikivoyage (CC BY-SA) · All figures are decision estimates.</div></footer>
+
+<script>
+/* =====================================================================
+   WAYPOINT v2 — live decision pipeline
+   CONFIG: when hosting outside Claude.ai (e.g. GitHub Pages), deploy a
+   tiny proxy that forwards to https://api.anthropic.com/v1/messages with
+   your key, and put its URL here. Inside Claude.ai this can stay "".
+===================================================================== */
+const CONFIG={
+  // 100% free by default: Wikidata + Wikipedia + Wikivoyage + Open-Meteo + Nager.Date + open FX.
+  AI_PROXY:"",   // OPTIONAL booster (see waypoint-worker.js); leave "" for the free engine
+  AI_TOKEN:"",
+  MODEL:"claude-sonnet-4-6", SHORTLIST:18 };
+
+/* ---------- utils ---------- */
+const $=id=>document.getElementById(id);
+const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+const store=(()=>{try{const t="__wp";localStorage.setItem(t,"1");localStorage.removeItem(t);return localStorage}
+catch(e){const m={};return{getItem:k=>k in m?m[k]:null,setItem:(k,v)=>{m[k]=String(v)},removeItem:k=>{delete m[k]}}}})();
+const loadJSON=(k,f)=>{try{return JSON.parse(store.getItem(k))??f}catch(e){return f}};
+const saveJSON=(k,v)=>{try{store.setItem(k,JSON.stringify(v))}catch(e){}};
+const RAD=Math.PI/180;
+const kmBetween=(a,b)=>{const dLa=(b[0]-a[0])*RAD,dLo=(b[1]-a[1])*RAD;
+ const q=Math.sin(dLa/2)**2+Math.cos(a[0]*RAD)*Math.cos(b[0]*RAD)*Math.sin(dLo/2)**2;return 6371*2*Math.asin(Math.sqrt(q))};
+const fmtH=t=>t==null?"?":((t%1?t.toFixed(1):String(t))+"h");
+const fmtMoney=(v,cur)=>{try{return new Intl.NumberFormat(undefined,{style:"currency",currency:cur,maximumFractionDigits:0}).format(v)}catch(e){return cur+" "+Math.round(v).toLocaleString()}};
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function extractJSON(text){ // tolerant: strips fences/preamble, grabs first [..] or {..}
+  let t=String(text).replace(/```json|```/g,"").trim();
+  const i=Math.min(...["[","{"].map(c=>{const x=t.indexOf(c);return x<0?1e9:x}));
+  if(i===1e9)throw new Error("no JSON");
+  t=t.slice(i);
+  const open=t[0],close=open==="["?"]":"}";let d=0,end=-1,inS=false;
+  for(let k=0;k<t.length;k++){const ch=t[k];
+    if(inS){if(ch==='"'&&t[k-1]!=="\\")inS=false;continue}
+    if(ch==='"')inS=true;else if(ch===open)d++;else if(ch===close){d--;if(!d){end=k;break}}}
+  return JSON.parse(t.slice(0,end+1));
+}
+
+/* ---------- state ---------- */
+const S={step:0,
+  a:{origin:null,               // {name, cc, ll:[lat,lon], country}
+     month:"flex",days:10,party:"family",interests:[],
+     sliders:{pace:55,comfort:55,price:60,adventure:45}},
+  skipped:new Set(),
+  cands:[],                     // pipeline candidates
+  climate:{},                   // key -> {tmax, rain, wetDays, src}
+  deep:{},                      // key -> deep-dive JSON (+_stale)
+  holidays:[],longWeekends:[],enrich:{},wdOK:null,modeSel:{},hidden:0,
+  feedback:loadJSON("wp_fb2",{}), sel:null, prevRank:null,
+  aiOK:null, year:new Date().getFullYear()
+};
+const ckey=c=>(c.n+"|"+c.co).toLowerCase();
+
+/* ---------- free, keyless data sources (work on GitHub Pages too) ---------- */
+async function geocode(q){
+  const u=`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=4&addressdetails=1&accept-language=en&q=${encodeURIComponent(q)}`;
+  const r=await fetch(u,{headers:{Accept:"application/json"}});
+  const j=await r.json();
+  return j.map(x=>({name:x.display_name.split(",").slice(0,2).join(",").trim(),
+    full:x.display_name, cc:(x.address&&x.address.country_code||"").toUpperCase(),
+    country:x.address&&x.address.country||"", ll:[+x.lat,+x.lon]}));
+}
+async function reverseGeo(ll){
+  const u=`https://nominatim.openstreetmap.org/reverse?format=jsonv2&accept-language=en&lat=${ll[0]}&lon=${ll[1]}`;
+  const j=await(await fetch(u)).json();
+  const a=j.address||{};
+  return{name:[a.city||a.town||a.village||a.county,a.country].filter(Boolean).join(", "),
+    cc:(a.country_code||"").toUpperCase(),country:a.country||"",ll};
+}
+async function fetchHolidays(cc,year){
+  const out=[];
+  for(const y of[year,year+1]){
+    try{const r=await fetch(`https://date.nager.at/api/v3/PublicHolidays/${y}/${cc}`);
+      if(r.ok)out.push(...await r.json())}catch(e){}}
+  return out; // [{date:"2026-08-15", localName, name}]
+}
+function findLongWeekends(hols,month){ // holidays that touch a weekend → cheap extra days
+  const seen=new Set();
+  hols=hols.filter(x=>{const k=x.date+"|"+x.name;if(seen.has(k))return false;seen.add(k);return true});
+  return hols.filter(h=>{
+    const d=new Date(h.date+"T00:00:00");if(month!=="flex"&&month!=null&&d.getMonth()!==month)return false;
+    if(d<new Date())return false;
+    const wd=d.getDay();return wd===0||wd===1||wd===5||wd===6;
+  }).slice(0,4).map(h=>{
+    const d=new Date(h.date+"T00:00:00"),wd=d.getDay();
+    const shape=wd===1?"Mon — pairs with the weekend before":wd===5?"Fri — pairs with the weekend after":"on a weekend edge";
+    return{...h,shape,m:d.getMonth()};
+  });
+}
+async function fetchClimate(c,month){ // last year's actuals for that month = honest seasonality
+  const y=S.year-1,mm=String(month+1).padStart(2,"0");
+  const end=new Date(y,month+1,0).getDate();
+  const u=`https://archive-api.open-meteo.com/v1/era5?latitude=${c.la}&longitude=${c.lo}`+
+    `&start_date=${y}-${mm}-01&end_date=${y}-${mm}-${end}&daily=temperature_2m_max,precipitation_sum&timezone=auto`;
+  const j=await(await fetch(u)).json();
+  const T=j.daily.temperature_2m_max,P=j.daily.precipitation_sum;
+  const tmax=T.reduce((s,v)=>s+v,0)/T.length;
+  const wet=P.filter(v=>v>=4).length;
+  return{tmax:Math.round(tmax),wetDays:wet,rain:Math.round(P.reduce((s,v)=>s+v,0)),src:`${MONTHS[month]} ${y} actuals`};
+}
+function seasonFitFromClimate(cl){ // 0-10 comfort heuristic from real data
+  if(!cl)return null;
+  let s=10-Math.min(6,Math.abs(cl.tmax-25)/2.2)-Math.min(4,cl.wetDays/4);
+  return Math.max(0,Math.round(s*10)/10);
+}
+
+/* ---------- free discovery & enrichment (no keys, CORS-open) ---------- */
+const WD_CLASSES="wd:Q515 wd:Q1549591 wd:Q3957 wd:Q46169 wd:Q882127 wd:Q1187811 wd:Q40357";
+// city, big city, town, national park, hill station, island, archipelago… tuned for "places worth a trip"
+async function sparqlNearby(ll,radiusKm,minLinks,limit){
+  const q=`SELECT ?item ?itemLabel ?countryLabel ?cc ?lat ?lon ?links WHERE{
+    SERVICE wikibase:around{ ?item wdt:P625 ?loc. bd:serviceParam wikibase:center "Point(${ll[1]} ${ll[0]})"^^geo:wktLiteral.
+      bd:serviceParam wikibase:radius "${radiusKm}". }
+    { VALUES ?cls {${WD_CLASSES}} ?item wdt:P31 ?cls. } UNION { ?item wdt:P1435 wd:Q9259. }
+    ?item wikibase:sitelinks ?links. FILTER(?links>=${minLinks})
+    ?item wdt:P17 ?country. OPTIONAL{?country wdt:P297 ?cc.}
+    BIND(geof:latitude(?loc) AS ?lat) BIND(geof:longitude(?loc) AS ?lon)
+    SERVICE wikibase:label{ bd:serviceParam wikibase:language "en". } } ORDER BY DESC(?links) LIMIT ${limit}`;
+  const r=await fetch("https://query.wikidata.org/sparql?format=json&query="+encodeURIComponent(q),
+    {headers:{Accept:"application/sparql-results+json"}});
+  const j=await r.json();
+  return j.results.bindings.map(b=>({n:b.itemLabel.value,co:b.countryLabel?b.countryLabel.value:"",
+    cc:b.cc?b.cc.value:"",la:+b.lat.value,lo:+b.lon.value,links:+b.links.value}));
+}
+function wdToCand(w){ // priors for a Wikidata-discovered place
+  const km=kmBetween(S.a.origin.ll,[w.la,w.lo])*1.25; // road factor
+  const mo=km<=650?"drive":km<=1000?"train":"fly";
+  const h=mo==="fly"?Math.round((0.9+km/1.25/830)*2)/2:Math.round(km/(mo==="drive"?72:95)*2)/2;
+  const pop=Math.min(9,Math.round(w.links/22)+4);
+  return{n:w.n,co:w.co,cc:w.cc,la:w.la,lo:w.lo,mo,h,src:"wd",links:w.links,
+    d:km<400?2:3,"$":TIER[w.cc]||3,pk:"",a:`Notable nearby find — ${w.links} Wikipedia editions cover it`,
+    t:{be:4,na:6,cu:Math.min(9,pop),fo:Math.min(8,pop-1),ad:5,ni:Math.max(3,pop-3),fa:6,ca:6}};
+}
+async function discoverNearby(){
+  // lower sitelink floors (domestic gems have few language editions) + parallel
+  // small queries so one dense/slow ring can't sink the whole discovery
+  const rings=S.radii||discoveryRadii().rings;
+  const jobs=[sparqlNearby(S.a.origin.ll,rings[0],5,14)];
+  if(rings[1]>rings[0]+40)jobs.push(sparqlNearby(S.a.origin.ll,rings[1],9,12));
+  const res=await Promise.allSettled(jobs);
+  return res.flatMap(r=>r.status==="fulfilled"?r.value:[]);
+}
+async function wikiCard(name,country){ // best-effort image + intro + link, CC BY-SA
+  const out={};
+  const g=(host,props)=>fetch(`https://${host}/w/api.php?action=query&format=json&origin=*&redirects=1&generator=search&gsrlimit=1&gsrsearch=${encodeURIComponent(name+" "+country)}&${props}`).then(r=>r.json()).then(j=>{const p=j.query&&j.query.pages;return p&&Object.values(p)[0]});
+  try{const p=await g("en.wikipedia.org","prop=pageimages%7Cinfo&inprop=url&pithumbsize=900");
+    if(p){out.img=p.thumbnail&&p.thumbnail.source;out.wp=p.fullurl;out.title=p.title}}catch(e){}
+  try{const p=await g("en.wikivoyage.org","prop=extracts%7Cinfo&inprop=url&exintro=1&explaintext=1&exchars=420");
+    if(p&&p.extract){out.voy=p.extract.replace(/\s+/g," ").trim();out.voyUrl=p.fullurl}}catch(e){}
+  return out;
+}
+let FX=null;
+async function fetchFx(){try{const j=await(await fetch("https://open.er-api.com/v6/latest/USD")).json();
+  if(j&&j.rates)FX=j.rates}catch(e){}}
+const CC2CUR={US:"USD",GB:"GBP",IN:"INR",EU:"EUR",DE:"EUR",FR:"EUR",ES:"EUR",IT:"EUR",PT:"EUR",NL:"EUR",IE:"EUR",AT:"EUR",BE:"EUR",FI:"EUR",GR:"EUR",SI:"EUR",SK:"EUR",EE:"EUR",LV:"EUR",LT:"EUR",LU:"EUR",MT:"EUR",CY:"EUR",HR:"EUR",JP:"JPY",CN:"CNY",AU:"AUD",NZ:"NZD",CA:"CAD",CH:"CHF",SE:"SEK",NO:"NOK",DK:"DKK",PL:"PLN",CZ:"CZK",HU:"HUF",RO:"RON",BG:"BGN",TR:"TRY",RU:"RUB",UA:"UAH",AE:"AED",SA:"SAR",QA:"QAR",IL:"ILS",EG:"EGP",MA:"MAD",ZA:"ZAR",KE:"KES",NG:"NGN",BR:"BRL",MX:"MXN",AR:"ARS",CL:"CLP",CO:"COP",PE:"PEN",TH:"THB",VN:"VND",ID:"IDR",MY:"MYR",SG:"SGD",PH:"PHP",KR:"KRW",TW:"TWD",HK:"HKD",PK:"PKR",BD:"BDT",LK:"LKR",NP:"NPR",IS:"ISK",RS:"RSD",GE:"GEL",AM:"AMD",AZ:"AZN",KZ:"KZT",UZ:"UZS",JO:"JOD",OM:"OMR",KW:"KWD",BH:"BHD",TN:"TND",CR:"CRC",PA:"PAB",DO:"DOP",JM:"JMD",EC:"USD",UY:"UYU",BO:"BOB",PY:"PYG",MV:"MVR",KH:"KHR",LA:"LAK",MM:"MMK",MN:"MNT",FJ:"FJD"};
+const TIER={CH:5,IS:5,NO:5,DK:5,MV:5,JP:4,US:4,GB:4,AU:4,NZ:4,CA:4,SE:4,FI:4,NL:4,IE:4,SG:4,AE:4,QA:4,IL:4,FR:4,AT:4,DE:3,IT:3,ES:3,KR:3,HK:4,BE:3,PT:3,GR:3,SI:3,CZ:3,HR:3,CY:3,MT:3,EE:3,TW:3,CL:3,UY:3,CR:3,PL:2,HU:2,SK:2,LT:2,LV:2,RO:2,BG:2,RS:2,ME:2,MK:2,AL:2,BA:2,TR:2,GE:2,AM:2,ZA:2,MA:2,TN:2,JO:2,OM:3,SA:3,KW:3,BH:3,MX:2,BR:2,AR:2,CO:2,PE:2,EC:2,TH:2,MY:2,CN:2,FJ:3,IN:1,LK:1,NP:1,BD:1,PK:1,VN:1,ID:1,PH:1,KH:1,LA:1,MM:1,EG:1,KE:1,NG:1,UZ:1,KZ:2,MN:1,BO:1,PY:1,DO:2,JM:2,PA:2};
+
+/* ---------- free budget engine (all ESTIMATE-tagged) ---------- */
+function calcBudget(c){
+  const a=S.a,sl=a.sliders,days=a.days||6,nights=Math.max(1,days-1);
+  const sel=chosenMode(c),nightsSaved=sel.nightsSaved||0;
+  const tier=c["$"]||3, comfort=0.65+sl.comfort/100*0.95;
+  const stayN=[0,18,35,70,130,260][tier]*comfort;
+  const foodD=[0,12,20,35,55,90][tier];
+  const locD=[0,3,6,10,15,22][tier];
+  const expD=[0,5,10,18,30,50][tier]*(0.6+sl.pace/150+sl.adventure/200);
+  const stayNights=Math.max(1,nights-nightsSaved);
+  const items=[["Transport · "+sel.label.toLowerCase(),sel.cost[0],sel.cost[1]],
+    ["Stay · "+stayNights+" night"+(stayNights>1?"s":"")+(nightsSaved?" (−"+nightsSaved+" on train)":""),stayN*stayNights*0.75,stayN*stayNights*1.35],
+    ["Food · "+days+" days",foodD*days*0.85,foodD*days*1.4],
+    ["Local transport",locD*days*0.7,locD*days*1.5],
+    ["Experiences",expD*days*0.6,expD*days*1.5]];
+  const sub=items.reduce((s,i)=>s+i[2],0);items.push(["Buffer",sub*0.07,sub*0.12]);
+  const cur=CC2CUR[a.origin.cc]||"USD",rate=FX&&FX[cur]?FX[cur]:1,fxOK=!!(FX&&FX[cur]);
+  return{cur:fxOK?cur:"USD",fxOK,usd:[items.reduce((s,i)=>s+i[1],0),items.reduce((s,i)=>s+i[2],0)],
+    items:items.map(([k,lo,hi])=>({k,lo:lo*rate,hi:hi*rate}))};
+}
+
+/* ---------- time-aware travel model (review §6) ----------
+   Reach = f(time in hand, time the place deserves, mode) — never a fixed radius.
+   Distance-band mode rules apply only within a land-connected zone (no sea/overseas). */
+const EURAIL=new Set("FR DE ES PT IT CH AT BE NL LU CZ SK HU PL SI HR DK SE NO GB".split(" "));
+const NEIGHBORS=new Set(["IN|NP","US|CA","US|MX","MY|TH","LA|TH","KH|TH","KH|VN","LA|VN","AR|CL","AR|UY","IL|JO","AE|OM","KE|TZ","AM|GE","GE|TR","KZ|UZ"]);
+const landZone=c=>{const o=S.a.origin.cc;if(!o||!c.cc)return false;
+  if(o===c.cc||(EURAIL.has(o)&&EURAIL.has(c.cc)))return true;
+  return NEIGHBORS.has([o,c.cc].sort().join("|"))};
+function travelBudgetH(c){ // one-way effective hours we can afford
+  const days=S.a.days||6;
+  // one-way ≤ half of what's left after the place gets its due, AND round-trip ≤ 50% of total time
+  return Math.max(0,Math.min((days*12-(c.d||3)*10)*0.5, days*12*0.25));
+}
+function modeOptions(c){
+  const sig=S.a.origin.cc+"|"+S.a.origin.ll.join(",");
+  if(c._opts&&c._optsFor===sig)return c._opts;
+  const gc=kmBetween(S.a.origin.ll,[c.la,c.lo]),km=gc*1.25,land=landZone(c),o=[];
+  const add=(mo,label,h,effH,lo,hi,note,ns=0)=>o.push({mo,label,h:Math.round(h*2)/2,
+    effH:Math.round(effH*2)/2,cost:[lo,hi],nightsSaved:ns,note});
+  if(land&&km<=380){ // SHORT band
+    add("drive","Own car / self-drive",km/60+0.6,km/60+0.6,km*2*0.045,km*2*0.09,"door-to-door; split fuel if sharing");
+    add("cab","Cab / chauffeur",km/62+0.5,km/62+0.5,km*2*0.11,km*2*0.17,"zero effort, higher cost");
+    add("train","Express train",km/78+1.3,km/78+1.3,km*2*0.018,km*2*0.035,"city-center to city-center");
+  }else if(land&&km<=680){ // MEDIUM band — the smart-money band
+    const th=km/70+1.2;
+    if(th>=7&&th<=15)add("train","Overnight train",th,3,km*2*0.02,km*2*0.045,"sleep en route — saves hotel nights",2);
+    else add("train","Train",th,th,km*2*0.02,km*2*0.045,"");
+    add("traincar","Train + rental car",th+1,(th>=7?4.5:th+1),km*2*0.035,km*2*0.07,"arrive rested, wheels at the destination",th>=7?1:0);
+    add("drive","Own car (full load)",km/66+0.9,km/66+0.9,km*2*0.045,km*2*0.09,"extra-long drive — start pre-dawn");
+  }
+  if(land&&km>680&&km<=1500){const th=km/75+1.5;
+    if(th<=16)add("train","Overnight train",th,4,km*2*0.02,km*2*0.045,"the slow-travel option",2)}
+  if(!land||km>620){ // LONG / overseas — bands don't apply across sea
+    const fh=2.8+gc/760+(gc>9000?1.5:0);
+    const base=gc<1500?40+0.11*gc:gc<4000?90+0.075*gc:180+0.055*gc;
+    add("fly","Flight",fh,fh,2*base*0.75,2*base*1.45,land?"":"crossing sea/border — air it is");
+  }
+  o.sort((a,b)=>a.effH-b.effH||a.cost[0]-b.cost[0]);
+  c._opts=o;c._optsFor=sig;return o;
+}
+function chosenMode(c){
+  const o=modeOptions(c),ov=S.modeSel[ckey(c)];
+  if(ov){const f=o.find(x=>x.label===ov);if(f)return f}
+  // value pick: effective hours + money at ~$40/waking-hour equivalence
+  const val=x=>x.effH+((x.cost[0]+x.cost[1])/2)/40;
+  const best=[...o].sort((a,b)=>val(a)-val(b))[0];
+  const fam=S.a.party==="family"||S.a.party==="multigen";
+  if(fam){const d=o.find(x=>x.mo==="drive");if(d&&d.effH<=best.effH+1.5)return d} // full load → own car when close
+  return best;
+}
+function feasibleCount(days){
+  const keep=S.a.days;S.a.days=days;
+  const n=S.cands.filter(c=>chosenMode(c).effH<=travelBudgetH(c)*1.1+.01).length;
+  S.a.days=keep;return n;
+}
+
+/* ---------- outbound links (single helper — affiliate-ready, never affects ranking) ---------- */
+function outLinks(c){
+  const q=encodeURIComponent(c.n+", "+c.co),o=S.a.origin;
+  return[["✈ Flights","https://www.google.com/travel/flights?q="+encodeURIComponent(`flights from ${o.name} to ${c.n}`)],
+    ["🏨 Stays","https://www.booking.com/searchresults.html?ss="+q],
+    ["🎟 Tours & activities","https://www.getyourguide.com/s/?q="+q],
+    ["🗺 Open guide","https://en.wikivoyage.org/wiki/Special:Search?search="+q]];
+}
+
+/* ---------- AI client (OPTIONAL booster; free engine never needs it) ---------- */
+async function askAI(prompt,{tools=null,max=1000}={}){
+  const url=CONFIG.AI_PROXY||"https://api.anthropic.com/v1/messages";
+  const body={model:CONFIG.MODEL,max_tokens:max,messages:[{role:"user",content:prompt}]};
+  if(tools)body.tools=tools;
+  const hdr={"Content-Type":"application/json"};
+  if(CONFIG.AI_PROXY&&CONFIG.AI_TOKEN)hdr["x-app-token"]=CONFIG.AI_TOKEN;
+  const r=await fetch(url,{method:"POST",headers:hdr,body:JSON.stringify(body)});
+  if(!r.ok)throw new Error("AI HTTP "+r.status);
+  const data=await r.json();
+  return (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
+}
+
+/* ---------- pipeline stage prompts ---------- */
+function deepPrompt(c){
+  const a=S.a,o=a.origin,m=a.month==="flex"?bestGuessMonth(c):a.month;
+  return `You are the deep-dive stage of a travel decision engine. Use web search to verify facts before answering.
+Destination: ${c.n}, ${c.co}. Traveler from ${o.name}, ${o.country} (${o.cc} passport assumed), ${MONTHS[m]} ${S.year}, ${a.days} days, party: ${a.party}, comfort ${a.sliders.comfort}/100, price sensitivity ${a.sliders.price}/100. Main mode: ${c.mo} (~${c.h}h one-way).
+Search for: notable festivals or special events in or near ${c.n} in ${MONTHS[m]} ${S.year}; whether that month is peak, shoulder or off season there; any current traveler cautions.
+Then estimate a realistic PER-PERSON budget for the whole trip from ${o.name}, in the traveler's home currency (ISO code, e.g. INR, USD, EUR — infer from ${o.country}).
+Respond with ONLY minified JSON, no markdown:
+{"season":"peak|shoulder|off","seasonNote":"<=16 words","events":[{"name":"","when":"","note":"<=10 words"}],"visa":"<=14 words for ${o.cc} citizens","alerts":["<=14 words"],"budget":{"cur":"","perUSD":0,"items":[{"k":"Transport (round trip)","lo":0,"hi":0},{"k":"Visa & fees","lo":0,"hi":0},{"k":"Stay · ${a.days-1} nights","lo":0,"hi":0},{"k":"Food · ${a.days} days","lo":0,"hi":0},{"k":"Local transport","lo":0,"hi":0},{"k":"Experiences","lo":0,"hi":0},{"k":"Buffer","lo":0,"hi":0}]},"whyNow":["<=16 words","",""],"tips":["<=14 words",""]}
+events: max 3, only real ones you verified (empty array if none). alerts: max 2, [] if none. Numbers plain, no separators.`;
+}
+function bestGuessMonth(c){ // flexible dates: away from origin-hemisphere winter, refined later by climate
+  const now=new Date().getMonth();return (now+2)%12;
+}
+
+/* ---------- pipeline orchestration ---------- */
+let LOG;
+function plog(txt,st="run"){const li=document.createElement("li");
+  li.innerHTML=`<span class="st ${st}">${st==="ok"?"✓":st==="er"?"×":"◌"}</span><span>${txt}</span>`;
+  LOG.appendChild(li);LOG.scrollTop=LOG.scrollHeight;return li}
+function pdone(li,txt,st="ok"){li.innerHTML=`<span class="st ${st}">${st==="ok"?"✓":"×"}</span><span>${txt}</span>`}
+
+async function runPipeline(){
+  $("intake").classList.add("hidden");$("pipeline").classList.remove("hidden");
+  LOG=$("pipeLog");LOG.innerHTML="";$("setupNote").innerHTML="";
+  $("pipeline").scrollIntoView({behavior:"smooth"});
+  const a=S.a;
+
+  /* 1 · holidays */
+  let li=plog(`Reading public holidays for <b>${esc(a.origin.country)}</b>…`);
+  try{S.holidays=await fetchHolidays(a.origin.cc,S.year);
+    S.longWeekends=findLongWeekends(S.holidays,"flex"); // keep every upcoming anchor; filter per-month at render
+    const nxt=S.longWeekends[0];
+    pdone(li,`Holiday calendar loaded — <b>${S.longWeekends.length}</b> upcoming long-weekend anchor${S.longWeekends.length===1?"":"s"}${nxt?` (next: ${esc(nxt.localName||nxt.name)} · ${nxt.date})`:""}`);}
+  catch(e){pdone(li,"Holiday calendar unavailable — continuing without it","er")}
+
+  /* 2 · FX rates (for budgets in your currency) */
+  fetchFx();
+
+  /* 3 · live discovery around the origin (Wikidata) + world atlas */
+  const gBudget=Math.max(0,((a.days||6)*12-2*10)*0.5);                 // ground budget for a 2-day-worthy stop
+  const driveR=Math.round(Math.min(900,Math.max(120,gBudget*60/1.25)));
+  const trainR=Math.round(Math.min(1400,Math.max(driveR,Math.min(gBudget,14)*85/1.25)));
+  S.radii=[driveR,trainR];
+  li=plog(`Feasible ground reach for ${a.days||6} days ≈ <b>${driveR} km</b> by road, <b>${trainR} km</b> by rail — discovering live from Wikidata…`);
+  let nearby=[];try{nearby=await discoverNearby();S.wdOK=nearby.length>0}catch(e){S.wdOK=false}
+  const atlas=atlasCands();
+  const merged=[...atlas];
+  nearby.map(wdToCand).forEach(c=>{           // atlas entry wins if it's the same place
+    if(!merged.some(m2=>kmBetween([m2.la,m2.lo],[c.la,c.lo])<40))merged.push(c)});
+  S.cands=merged.filter(c=>kmBetween(a.origin.ll,[c.la,c.lo])>50);
+  pdone(li,S.wdOK?`<b>${nearby.length}</b> nearby finds via Wikidata + <b>${atlas.length}</b>-place world atlas → <b>${S.cands.length}</b> candidates`
+    :`Wikidata unreachable — continuing with the <b>${atlas.length}</b>-place world atlas`, S.wdOK?"ok":"er");
+
+  /* 3b · on-device AI nominations, grounded by the map (only if the user enabled it) */
+  if(SLM.status==="ready"){
+    li=plog("Asking the on-device model for local-favorite getaways… (each one map-verified)");
+    try{const noms=await slmNominate();let added=0;
+      noms.forEach(c=>{if(!S.cands.some(m2=>kmBetween([m2.la,m2.lo],[c.la,c.lo])<30)){S.cands.push(c);added++}});
+      pdone(li,added?`<b>${added}</b> local favorites added (✨ suggested on-device · ✓ verified via OpenStreetMap)`:"No new nominations survived verification — open data already had them");
+    }catch(e){pdone(li,"On-device nomination skipped","er")}
+  }
+
+  /* 4 · pre-rank, then real weather for the shortlist */
+  li=plog(`Pre-ranking ${S.cands.length} candidates on interests, effort and value…`);
+  let ranked=rankAll();
+  const short=ranked.slice(0,CONFIG.SHORTLIST).map(r=>r.c);
+  pdone(li,`Shortlisted <b>${short.length}</b> for a real-weather check`);
+  const cm=a.month==="flex"?bestGuessMonth():a.month;
+  li=plog(`Pulling <b>real ${MONTHS[cm]} weather</b> (last year's daily actuals) for the shortlist…`);
+  await loadClimate(cm,short);
+  ranked=rankAll();
+  pdone(li,`Weather in. Front-runner: <b>${esc(ranked[0].c.n)}</b> (${ranked[0].total} pts)`);
+
+  /* 5 · enrich the top pick: photo, guide extract, local holidays */
+  li=plog(`Enriching <b>${esc(ranked[0].c.n)}</b> — photo, travel-guide intro, holidays at the destination…`);
+  try{await runEnrich(ckey(ranked[0].c),true);pdone(li,"Top pick enriched — everything sourced and labeled")}
+  catch(e){pdone(li,"Enrichment partly unavailable — card will still work","er")}
+  plog("Opening your board…","ok");
+  setTimeout(showResults,600);
+}
+async function loadClimate(m,subset){
+  await Promise.all((subset||S.cands).map(async c=>{
+    try{S.climate[ckey(c)+"|"+m]=await fetchClimate(c,m)}catch(e){}
+  }));
+}
+async function deepDive(c){
+  const txt=await askAI(deepPrompt(c),{tools:[{type:"web_search_20250305",name:"web_search"}],max:1000});
+  const j=extractJSON(txt);
+  j._when=Date.now();j._month=S.a.month;
+  S.deep[ckey(c)]=j;return j;
+}
+
+/* ---------- intake (open-ended origin) ---------- */
+const STEPS=[
+ {key:"origin",custom:true,title:"Where are you starting from?",
+  why:"Any town on Earth — we geocode it and build the entire long list around it.",noskip:true},
+ {key:"month",title:"Roughly when?",
+  why:"Sets which real-weather month we pull, and which festivals & holidays matter.",
+  chips:[...MONTHS.map((m,i)=>[i,m.slice(0,3)]),["flex","I'm flexible"]]},
+ {key:"days",title:"How many days?",
+  why:"Decides how far is worth going — and which places deserve their minimum time.",
+  chips:[[3,"Long weekend","3–4 days"],[6,"About a week","5–7 days"],[10,"Ten-ish days","8–12 days"],[15,"Two weeks +","13+ days"]]},
+ {key:"party",title:"Who's traveling?",
+  why:"Shapes pace, comfort weighting and family-fit scoring.",
+  chips:[["solo","Just me"],["couple","Two of us"],["family","Family with kids"],["friends","Friends group"],["multigen","Multi-generation"]]},
+ {key:"interests",title:"What makes a trip great for you?",multi:true,
+  why:"Pick a few — candidates are scored, never filtered.",
+  chips:[["beach","Beaches"],["nature","Nature & scenery"],["culture","Culture & history"],["food","Food"],["adventure","Adventure"],["nightlife","Nightlife"],["calm","Rest & calm"],["family","Kid-friendly fun"]]},
+ {key:"sliders",title:"Last one — did we guess you right?",sliders:true,
+  why:"Pre-estimated from your answers. Drag anything that feels off."}
+];
+function startIntake(){$("results").classList.add("hidden");$("pipeline").classList.add("hidden");renderMagic();S.maxStep=0;
+  $("intake").classList.remove("hidden");S.step=0;renderStep();
+  $("intake").scrollIntoView({behavior:"smooth"})}
+function estimateSliders(){const s={pace:55,comfort:55,price:60,adventure:45},a=S.a;
+  if(a.party==="family"||a.party==="multigen"){s.comfort+=15;s.pace-=10;s.adventure-=10}
+  if(a.party==="friends"){s.pace+=10;s.adventure+=10}
+  if(a.interests.includes("adventure"))s.adventure+=25;
+  if(a.interests.includes("calm")){s.pace-=20;s.comfort+=10}
+  if(a.interests.includes("nightlife"))s.pace+=10;
+  if((a.days||6)>=13)s.pace-=8;
+  for(const k in s)s[k]=Math.max(10,Math.min(90,s[k]));S.a.sliders=s}
+function renderStep(){
+  const st=STEPS[S.step],card=$("intakeCard");
+  if(st.sliders)estimateSliders();
+  S.maxStep=Math.max(S.maxStep||0,S.step);
+  const dots=STEPS.map((s,i)=>{
+    const done=i!==S.step&&i<=S.maxStep;
+    return `<button class="${(i===S.step?"cur ":"")+(done?"done":"")}" ${i<=S.maxStep&&i!==S.step?`onclick="gotoStep(${i})"`:"disabled"} title="${s.title}${done?" — tap to change":""}" aria-label="Step ${i+1}: ${s.title}"></button>`}).join("");
+  let body="";
+  if(st.custom){ // origin
+    const o=S.a.origin;
+    body=`<div class="origin-box">
+      <input class="txt" id="orgIn" placeholder="e.g. Indore · Eindhoven · Boise, Idaho" value="${o?esc(o.name):""}"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();findOrigin()}">
+      <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="findOrigin()">Find it →</button>
+        <button class="chip" onclick="geoOrigin()">📍 Use my location</button>
+      </div>
+      <ul class="origin-hits" id="orgHits" style="display:none"></ul>
+      <p class="est-note" id="orgNote" style="margin-top:10px">${o?`Selected: <b>${esc(o.name)}</b> — tap Next, or search again.`:""}</p>
+      ${o?`<div class="intake-nav" style="border:0;padding-top:8px;margin-top:6px"><span></span><button class="btn btn-primary" onclick="nextStep()">Next →</button></div>`:""}
+    </div>`;
+  }else if(st.sliders){
+    const L={pace:["Pace","Unwind","Explore everything"],comfort:["Comfort matters","Fine roughing it","Only nice places"],
+             price:["Price sensitivity","Money's no object","Every dollar counts"],adventure:["Adventure appetite","Keep it mellow","Adrenaline please"]};
+    body=Object.entries(L).map(([k,[t,lo,hi]])=>`
+      <div class="slider-row"><div class="sl-head"><b>${t}</b><span>${lo} ⟷ ${hi}</span></div>
+        <input type="range" min="0" max="100" value="${S.a.sliders[k]}" oninput="S.a.sliders.${k}=+this.value" aria-label="${t}"></div>`).join("")
+      +`<p class="est-note"><span class="tag est">ESTIMATE</span> Pre-set from your earlier answers — editable, like every assumption here.</p>`;
+  }else{
+    body=`<div class="chips">`+st.chips.map(([v,l,sub])=>{
+      const on=st.multi?S.a.interests.includes(v):String(S.a[st.key])===String(v);
+      return `<button class="chip ${on?'on':''}" onclick="pick('${st.key}','${v}',${!!st.multi})">${l}${sub?`<small>${sub}</small>`:""}</button>`}).join("")+`</div>`;
+  }
+  card.innerHTML=`<div class="steps-dots">${dots}</div>
+    <span class="eyebrow">Question ${S.step+1} of ${STEPS.length}</span>
+    <h3 class="q-title">${st.title}</h3><p class="q-why">${st.why}</p>${body}
+    <div class="intake-nav">
+      <span>${S.step>0?`<button class="btn-ghost" onclick="gotoStep(${S.step-1})">← Back</button>`:""}</span>
+      ${(st.multi||st.sliders)?`<button class="btn btn-primary" onclick="nextStep()">${S.step===STEPS.length-1?"✨ Run the magic →":"Next →"}</button>`
+        :st.custom?"":`<span class="skip-note">Tap an answer to continue</span>`}
+    </div>`;
+  if(st.custom)setTimeout(()=>{const i=$("orgIn");i&&i.focus()},50);
+}
+async function findOrigin(){
+  const q=$("orgIn").value.trim();if(!q)return;
+  $("orgNote").innerHTML="Searching…";
+  try{const hits=await geocode(q);
+    if(!hits.length){$("orgNote").innerHTML="No match — try adding a region or country.";return}
+    const ul=$("orgHits");ul.style.display="block";
+    ul.innerHTML=hits.map((h,i)=>`<li><button onclick='setOrigin(${JSON.stringify(JSON.stringify(h))})'>${esc(h.name)}<small>${esc(h.full)}</small></button></li>`).join("");
+    $("orgNote").innerHTML="Pick the right one:";
+  }catch(e){$("orgNote").innerHTML="Geocoder unreachable — check your connection and try again."}
+}
+function setOrigin(js){S.a.origin=JSON.parse(js);S.skipped.delete("origin");nextStep()}
+function geoOrigin(){
+  if(!navigator.geolocation){$("orgNote").innerHTML="Location isn't available here — type a place instead.";return}
+  $("orgNote").innerHTML="Locating…";
+  navigator.geolocation.getCurrentPosition(async p=>{
+    try{S.a.origin=await reverseGeo([p.coords.latitude,p.coords.longitude]);S.skipped.delete("origin");nextStep()}
+    catch(e){$("orgNote").innerHTML="Couldn't resolve your position — type a place instead."}
+  },()=>{$("orgNote").innerHTML="Couldn't detect your location — type a place instead."},{timeout:8000});
+}
+function gotoStep(i){if(i<=(S.maxStep||0)&&i!==S.step){S.step=i;renderStep()}}
+function nextStep(){if(S.step<STEPS.length-1){S.step++;renderStep()}else runPipeline()}
+function pick(key,val,multi){S.skipped.delete(key);
+  if(multi){const i=S.a.interests.indexOf(val);i>=0?S.a.interests.splice(i,1):S.a.interests.push(val);renderStep();return}
+  S.a[key]=(key==="month"&&val!=="flex")||key==="days"?+val:val;nextStep()}
+const IKEY={beach:"be",nature:"na",culture:"cu",food:"fo",adventure:"ad",nightlife:"ni",family:"fa",calm:"ca"};
+function scoreCand(c){
+  const a=S.a,sl=a.sliders;
+  const m=a.month==="flex"?bestGuessMonth(c):a.month;
+  const sel=chosenMode(c),tol=travelBudgetH(c);
+  const parts=[];const P=(label,pts,max)=>parts.push({label,pts:Math.round(pts*10)/10,max});
+  const cl=S.climate[ckey(c)+"|"+m],sf=seasonFitFromClimate(cl);
+  if(sf!=null)P("Season fit · real weather",sf/10*24,24);
+  else P("Season fit · assumed",13,24);
+  const ints=a.interests.length?a.interests:["nature","culture","food","beach"];
+  const match=ints.reduce((s,k)=>s+(c.t[IKEY[k]]??5),0)/ints.length;
+  P("Interests match",match/9*26,26);
+  const vibe=((sl.adventure/100)*c.t.ad+((100-sl.pace)/100)*c.t.ca+(sl.pace/100)*Math.max(c.t.cu,c.t.ni))/(9*(sl.adventure/100+1))*12;
+  P("Vibe fit",Math.min(12,vibe),12);
+  const costFit=1-Math.abs((c["$"]-1)/4-(1-sl.price/100))*(0.55+sl.price/150);
+  P("Value for you",Math.max(0,costFit)*14,14);
+  const eff=sel.effH<=tol?16-5*(sel.effH/Math.max(tol,0.5)):Math.max(0,11-(sel.effH-tol)*1.7);
+  P("Travel effort · "+sel.mo,eff,16);
+  if(sel.nightsSaved)P("Overnight travel — hotel nights saved",2,0);
+  const days=a.days||6;
+  let dd=Math.abs(a.origin.ll[1]-c.lo);if(dd>180)dd=360-dd;const tz=Math.round(dd/15);
+  if(days<=5&&tz>=6)P("Jet lag vs short trip",-Math.min(6,(tz-4)*0.9),0);
+  if(a.party==="family"||a.party==="multigen")P("Family fit",c.t.fa/9*8,8);
+  else P("Ease for your style",((c.t.ca+9-Math.abs(c.t.ni-sl.pace/12))/18)*(0.5+sl.comfort/200)*8,8);
+  if(c.pk&&c.pk.includes(m+1))P("Peak-season crowds",-(2.5+(100-sl.pace)/40),0);
+  if(days<c.d)P("Too little time",-Math.min(10,(c.d-days)*1.8),0);
+  const fb=S.feedback[ckey(c)];
+  if(fb==="been")P("Already visited",-8,0);
+  if(fb==="no")P("You said 'not for me'",-30,0);
+  if(fb==="love")P("You loved this",6,0);
+  const total=Math.max(0,Math.round(parts.reduce((s,p)=>s+p.pts,0)));
+  return{c,total,parts,m,cl,sel,tol,feasible:sel.effH<=tol*1.1+.01};
+}
+function rankAll(){ // hard-filter what time makes impossible (review: critical-criteria exception)
+  const all=S.cands.map(scoreCand).sort((a,b)=>b.total-a.total);
+  const fe=all.filter(r=>r.feasible);
+  if(fe.length>=4){S.hidden=all.length-fe.length;return fe}
+  S.hidden=0;return all;   // never strand the user with an empty board
+}
+function confidence(){let x=50+(STEPS.length-S.skipped.size)*5;
+  const cov=S.cands.length?Object.keys(S.climate).filter(k=>k.endsWith("|"+(S.a.month==="flex"?bestGuessMonth():S.a.month))).length/S.cands.length:0;
+  x+=Math.round(cov*10);if(S.wdOK)x+=6;if(FX)x+=2;if(S.a.interests.length===0)x-=4;
+  return Math.max(35,Math.min(95,x))}
+
+/* ---------- explanations ---------- */
+const F=()=>`<span class="tag fact">FACT</span>`,E=()=>`<span class="tag est">ESTIMATE</span>`,
+      A=()=>`<span class="tag assume">ASSUMPTION</span>`,Y=()=>`<span class="tag you">FROM YOU</span>`,
+      LIVE=()=>`<span class="badge-live">LIVE</span>`;
+const IL={beach:"beaches",nature:"nature & scenery",culture:"culture & history",food:"food",adventure:"adventure",nightlife:"nightlife",calm:"rest & calm",family:"kid-friendly fun"};
+function explain(r,ranked){
+  const c=r.c,a=S.a,sl=a.sliders,out={this:[],now:[],you:[],not:[],warn:[]};
+  const mt=k=>S.skipped.has(k)?A():Y();
+  out.this.push(`${esc(c.a)}. ${c.src==="wd"?LIVE():E()}`);
+  [...r.parts].filter(p=>p.max>0).sort((x,y)=>y.pts/(y.max||1)-x.pts/(x.max||1)).slice(0,3)
+    .forEach(p=>out.this.push(`<b>${p.label}</b> — ${p.pts} of ${p.max} points. ${E()}`));
+  if(r.sel.effH<=5.5)out.this.push(`Only <b>~${fmtH(r.sel.effH)}</b> effective travel by ${r.sel.label.toLowerCase()} from ${esc(a.origin.name)} — more of your trip stays on vacation. ${E()} ${mt("origin")}`);
+  if(r.sel.nightsSaved)out.this.push(`The <b>${r.sel.label.toLowerCase()}</b> saves <b>${r.sel.nightsSaved} hotel night${r.sel.nightsSaved>1?"s":""}</b> — travel while you sleep. ${E()}`);
+  if(r.cl)out.now.push(`${MONTHS[r.m]} there last year ran <b>~${r.cl.tmax}°C</b> daytime with <b>${r.cl.wetDays}</b> wet days — season fit is measured, not guessed. ${F()}`);
+  else out.now.push(`No weather record loaded for ${MONTHS[r.m]} — season fit is assumed. ${A()}`);
+  if(a.month==="flex")out.now.push(`Your dates are flexible; we evaluated ${MONTHS[r.m]} — use What-if to test other months. ${A()}`);
+  const ints=a.interests.length?a.interests:null;
+  if(ints){const hits=ints.filter(k=>(c.t[IKEY[k]]??0)>=7).map(k=>IL[k]);
+    if(hits.length)out.you.push(`You picked <b>${hits.join(", ")}</b> — all strengths here. ${Y()}`);
+    const miss=ints.filter(k=>(c.t[IKEY[k]]??0)<=3).map(k=>IL[k]);
+    if(miss.length)out.you.push(`Weaker on <b>${miss.join(", ")}</b> — worth knowing. ${E()}`);}
+  else out.you.push(`You skipped interests, so we scored a balanced mix. ${A()}`);
+  if(a.party==="family"||a.party==="multigen")out.you.push(`Family-fit rates <b>${c.t.fa}/9</b>. ${E()} ${mt("party")}`);
+  if(sl.price>=65)out.you.push(c["$"]<=2?`You're price-sensitive and this is genuinely low-cost (${"$".repeat(c["$"])} of $$$$$). ${E()}`
+    :c["$"]>=4?`Heads-up: you're price-sensitive and this runs expensive (${"$".repeat(c["$"])} of $$$$$). ${E()}`:``);
+  out.you=out.you.filter(Boolean);
+  ranked.filter(x=>ckey(x.c)!==ckey(c)).slice(0,2).forEach(v=>{
+    let worst=null;v.parts.forEach(vp=>{const mp=r.parts.find(p=>p.label===vp.label);
+      if(mp){const gap=mp.pts-vp.pts;if(!worst||gap>worst.gap)worst={gap,label:vp.label}}});
+    out.not.push(worst&&worst.gap>0.5
+      ?`<b>${esc(v.c.n)}</b> (${v.total} pts) trails mainly on <b>${worst.label.toLowerCase()}</b> — ~${Math.round(worst.gap)} pts behind. ${E()}`
+      :`<b>${esc(v.c.n)}</b> (${v.total} pts) is genuinely close — a defensible pick too. ${E()}`)});
+  const days=a.days||6;
+  if(days<c.d)out.warn.push(`You have <b>${days} days</b>; ${esc(c.n)} deserves <b>${c.d}+</b>. ${E()} ${mt("days")}`);
+  if(r.sel.mo==="fly"&&r.sel.h>=12)out.warn.push(`Roughly <b>~${fmtH(r.sel.h)}</b> in the air each way — budget a recovery day. ${E()}`);
+  return out;
+}
+
+/* ---------- results rendering ---------- */
+function showResults(){$("pipeline").classList.add("hidden");$("results").classList.remove("hidden");
+  S.prevRank=null;S.sel=null;refresh(true);$("results").scrollIntoView({behavior:"smooth"})}
+function refresh(first){
+  const ranked=rankAll();
+  if(!S.sel||!ranked.some(r=>ckey(r.c)===S.sel))S.sel=ckey(ranked[0].c);
+  renderBoard(ranked,first);renderDetail(ranked);renderDock();
+  const foot=$("boardFoot");
+  if(S.hidden>0){const un=Math.max(0,feasibleCount((S.a.days||6)+2)-(ranked.length));
+    foot.innerHTML=`${S.hidden} PLACES HIDDEN — TRAVEL TIME WOULD EAT YOUR ${S.a.days||6} DAYS`+(un>0?` · <b style="color:var(--board-amber)">+2 DAYS UNLOCKS ${un} MORE</b>`:"");}
+  else foot.textContent="SCORES RE-COMPUTE INSTANTLY WHEN ASSUMPTIONS CHANGE";
+  $("confPill").innerHTML=`CONFIDENCE <b>${confidence()}%</b> · ${S.wdOK?"live discovery":"atlas only"}`;
+  S.prevRank=ranked.map(r=>ckey(r.c));
+}
+const MICON={fly:"✈",train:"🚆",drive:"🚗",cab:"🚕",traincar:"🚆"};
+function renderBoard(ranked,first){
+  const list=$("boardList");
+  const old={};list.querySelectorAll(".board-row").forEach(el=>old[el.dataset.id]=el.getBoundingClientRect().top);
+  list.innerHTML=ranked.slice(0,9).map((r,i)=>{
+    let dl=`<span class="dl eq"></span>`;
+    if(S.prevRank){const pi=S.prevRank.indexOf(ckey(r.c));
+      if(pi>=0&&pi!==i)dl=pi>i?`<span class="dl up">▲${pi-i}</span>`:`<span class="dl dn">▼${i-pi}</span>`;
+      else if(pi<0)dl=`<span class="dl up">NEW</span>`}
+    return `<li><button class="board-row ${ckey(r.c)===S.sel?"sel":""}" data-id="${esc(ckey(r.c))}" onclick="selectDest('${esc(ckey(r.c))}')">
+      <span class="rk">${String(i+1).padStart(2,"0")}</span>
+      <span class="nm">${esc(r.c.n).toUpperCase()}<small>${esc(r.c.co).toUpperCase()} · ${"$".repeat(r.c["$"])} · <span class="mode-ic">${MICON[r.c.mo]}</span>~${fmtH(r.c.h).toUpperCase()}</small></span>
+      <span class="sc">${r.total}</span>${dl}</button></li>`}).join("");
+  if(!first)list.querySelectorAll(".board-row").forEach(el=>{
+    const o=old[el.dataset.id];if(o==null)return;
+    const dY=o-el.getBoundingClientRect().top;if(!dY)return;
+    el.animate([{transform:`translateY(${dY}px)`},{transform:"translateY(0)"}],{duration:520,easing:"cubic-bezier(.2,.8,.2,1)"})});
+}
+function selectDest(k){S.sel=k;refresh()}
+function renderDock(){
+  const a=S.a,sl=a.sliders;
+  $("dock").innerHTML=`
+    <h3>What if…?</h3><p class="sub">Change any assumption — the board reacts. Month changes re-pull real weather.</p>
+    <div class="row"><label>Month</label>
+      <select onchange="changeMonth(this.value)">
+        <option value="flex" ${a.month==="flex"?"selected":""}>Flexible</option>
+        ${MONTHS.map((m,i)=>`<option value="${i}" ${a.month===i?"selected":""}>${m}</option>`).join("")}
+      </select></div>
+    <div class="row"><label>Days <span class="sl-val">${a.days||6}</span></label>
+      <input type="range" min="3" max="21" value="${a.days||6}" oninput="S.a.days=+this.value;S.skipped.delete('days');refresh()" aria-label="Days"></div>
+    ${[["price","Price sensitivity"],["adventure","Adventure"],["comfort","Comfort"],["pace","Pace (unwind → explore)"]].map(([k,l])=>`
+    <div class="row"><label>${l} <span class="sl-val">${sl[k]}</span></label>
+      <input type="range" min="0" max="100" value="${sl[k]}" oninput="S.a.sliders.${k}=+this.value;refresh()" aria-label="${l}"></div>`).join("")}
+    <label class="toggle"><input type="checkbox" ${a.party==="family"||a.party==="multigen"?"checked":""}
+      onchange="S.a.party=this.checked?'family':'couple';S.skipped.delete('party');refresh()"> Traveling with kids / grandparents</label>
+    <div class="row" style="margin-top:14px;border-top:1px solid var(--mist);padding-top:14px">
+      <button class="dock-geo" onclick="shareLink()">🔗 Copy a share link to this search</button>
+      <label style="margin-top:10px">Origin · ${esc(a.origin.name)}</label>
+      <button class="btn-ghost" style="padding:4px 0" onclick="startIntake()">↺ New origin or interests — re-run the pipeline</button></div>`;
+}
+async function changeMonth(v){
+  S.a.month=v==="flex"?"flex":+v;S.skipped.delete("month");
+  Object.values(S.deep).forEach(d=>d._stale=d._month!==S.a.month);
+  const m=S.a.month==="flex"?bestGuessMonth():S.a.month;
+  $("boardFoot").textContent=`PULLING REAL ${MONTHS[m].toUpperCase()} WEATHER…`;
+  await loadClimate(m,rankAll().slice(0,CONFIG.SHORTLIST).map(r=>r.c));
+  $("boardFoot").textContent="SCORES RE-COMPUTE INSTANTLY WHEN ASSUMPTIONS CHANGE";
+  refresh();
+}
+
+function budgetHTML(c){
+  const b=calcBudget(c);
+  const maxHi=Math.max(...b.items.map(i=>i.hi),1);
+  const tLo=b.items.reduce((s,i)=>s+i.lo,0),tHi=b.items.reduce((s,i)=>s+i.hi,0);
+  const usd=b.cur!=="USD"?` <span>≈ $${Math.round(b.usd[0]).toLocaleString()}–${Math.round(b.usd[1]).toLocaleString()} USD${b.fxOK?" · live FX":""}</span>`:"";
+  return `<div class="why"><h4>Estimated budget · per person ${E()}</h4>
+    <div class="budget">${b.items.map(i=>`
+      <div class="bg-row"><span class="lbl">${esc(i.k)}</span>
+        <div class="bg-bar"><i style="left:${i.lo/maxHi*100}%;right:${100-Math.max(i.hi/maxHi*100,i.lo/maxHi*100+2)}%"></i></div>
+        <span class="rng">${fmtMoney(i.lo,b.cur)} – ${fmtMoney(i.hi,b.cur)}</span></div>`).join("")}
+      <div class="bg-total"><b>${fmtMoney(tLo,b.cur)} – ${fmtMoney(tHi,b.cur)}</b>${usd}</div>
+    </div><p class="est-note">Computed from distance, cost tier and your comfort/pace sliders — it re-prices live as you drag them.</p></div>`;
+}
+async function distillVoy(text){
+  if(SLM.status!=="ready"||!text)return null;
+  try{let t=(await slmChat("You compress travel-guide text. Use ONLY the given text — no new facts, no numbers that are not in it. One sentence, max 20 words, plain text.",text.slice(0,700),50)).replace(/\s+/g," ").trim();
+    return(t.length>15&&t.length<160)?t:null;
+  }catch(e){return null}
+}
+async function runEnrich(k,silent){
+  const c=S.cands.find(x=>ckey(x)===k);if(!c)return;
+  if(!silent){const b=$("enRun");if(b){b.disabled=true;b.textContent="Fetching photo, guide intro, local holidays…"}}
+  const en={};
+  const jobs=[wikiCard(c.n,c.co).then(w=>Object.assign(en,w))];
+  if(c.cc)jobs.push(fetchHolidays(c.cc,S.year).then(hs=>{
+    const m=S.a.month==="flex"?bestGuessMonth():S.a.month;
+    const seen=new Set();
+    en.destHols=hs.filter(x=>{const k=x.date+"|"+x.name;if(seen.has(k))return false;seen.add(k);
+      const d=new Date(x.date+"T00:00:00");return d.getMonth()===m&&d>=new Date()}).slice(0,3)}));
+  await Promise.all(jobs.map(p=>p.catch(()=>{})));
+  if(en.voy){const g=await distillVoy(en.voy);if(g)en.gist=g}
+  en._month=S.a.month;S.enrich[k]=en;
+  if(!silent)refresh();
+}
+function enrichHTML(c){
+  const en=S.enrich[ckey(c)];
+  const visaUrl=`https://en.wikipedia.org/wiki/Visa_requirements_for_${encodeURIComponent(S.a.origin.country.replace(/ /g,"_"))}_citizens`;
+  if(!en)return `<div class="why"><h4>Know it better</h4>
+    <button class="btn btn-primary" id="enRun" onclick="runEnrich('${esc(ckey(c))}')">📷 Enrich — photo, guide intro, local holidays →</button></div>`;
+  const m=S.a.month==="flex"?bestGuessMonth():S.a.month;
+  const fest=(c.fe||[]).filter(f=>f[0]===m+1);
+  return `${en.img?`<div style="margin:0 0 18px;border-radius:14px;overflow:hidden;border:1px solid var(--mist)">
+      <img src="${en.img}" alt="${esc(c.n)}" style="width:100%;display:block;max-height:280px;object-fit:cover">
+      <div style="font-size:11px;color:var(--ink-soft);padding:6px 10px">Photo via <a href="${en.wp||"#"}" target="_blank" rel="noopener">Wikipedia</a> ${F()}</div></div>`:""}
+    ${en.voy?`<div class="why"><h4>From the open travel guide ${F()}</h4>
+      <ul>${en.gist?`<li><b>In short:</b> ${esc(en.gist)} <span class="tag ai">ON-DEVICE AI</span></li>`:""}<li>${esc(en.voy)} <a href="${en.voyUrl}" target="_blank" rel="noopener">Wikivoyage</a> · CC BY-SA</li></ul></div>`:""}
+    ${(fest.length||en.destHols&&en.destHols.length)?`<div class="why"><h4>While you're there</h4><ul>
+      ${fest.map(f=>`<li><b>${esc(f[1])}</b> — happening in ${MONTHS[m]}. ${F()}</li>`).join("")}
+      ${(en.destHols||[]).map(x=>`<li>Local public holiday: <b>${esc(x.localName||x.name)}</b> (${x.date}) — expect closures & local crowds. ${F()}</li>`).join("")}
+    </ul></div>`:""}
+    <div class="why"><h4>Paperwork</h4><ul><li>Visa rules change — check the current table for ${esc(S.a.origin.country)} citizens: <a href="${visaUrl}" target="_blank" rel="noopener">Wikipedia visa requirements</a>. ${F()}</li></ul></div>
+    ${budgetHTML(c)}
+    ${CONFIG.AI_PROXY?`<div class="why"><h4>Optional AI booster</h4>
+      <button class="dd-btn" id="ddRun" onclick="runDeep('${esc(ckey(c))}')">🔍 AI-verify events & season for ${MONTHS[m]}</button></div>`:""}
+    ${aiDeepHTML(c)}`;
+}
+function aiDeepHTML(c){
+  const dp=S.deep[ckey(c)];if(!dp)return"";
+  return `<div class="why"><h4>AI-verified · season & events ${LIVE()}</h4><ul>
+    <li><b>${esc((dp.season||"?").toUpperCase())} SEASON</b> — ${esc(dp.seasonNote||"")} ${F()}</li>
+    ${(dp.events||[]).map(e=>`<li><b>${esc(e.name)}</b> · ${esc(e.when)} — ${esc(e.note)} ${F()}</li>`).join("")}
+    ${(dp.alerts||[]).map(x=>`<li class="warn">${esc(x)} ${F()}</li>`).join("")}</ul></div>`;
+}
+function holidayHTML(r){
+  if(!S.longWeekends.length)return"";
+  const inMonth=S.longWeekends.filter(h=>S.a.month==="flex"||h.m===S.a.month);
+  if(inMonth.length)
+    return `<div class="holiday-tip"><b>SMART TIMING · YOUR HOLIDAY CALENDAR ${LIVE()}</b>
+      ${inMonth.slice(0,2).map(h=>`Anchoring on <b>${esc(h.localName||h.name)}</b> (${h.date}, ${h.shape}) turns a ${S.a.days||6}-day trip into fewer leave days.`).join("<br>")} ${F()}</div>`;
+  const nxt=S.longWeekends[0];
+  return `<div class="holiday-tip"><b>SMART TIMING · YOUR HOLIDAY CALENDAR ${LIVE()}</b>
+    No long-weekend anchor in ${S.a.month==="flex"?"the near months":MONTHS[S.a.month]} — the nearest is <b>${esc(nxt.localName||nxt.name)}</b> (${nxt.date}, ${nxt.shape}). Shifting your trip there saves leave days. ${F()}</div>`;
+}
+const MLAB={fly:"✈",train:"🚆",drive:"🚗",cab:"🚕",traincar:"🚆+🚗"};
+function fxTo(usdLo,usdHi){const cur=CC2CUR[S.a.origin.cc]||"USD",r=FX&&FX[cur]?FX[cur]:1;
+  return fmtMoney(usdLo*r,FX&&FX[cur]?cur:"USD")+" – "+fmtMoney(usdHi*r,FX&&FX[cur]?cur:"USD")}
+function travelHTML(r){
+  const c=r.c,opts=modeOptions(c),sel=r.sel;
+  const pct=Math.min(140,Math.round(sel.effH/Math.max(r.tol,0.5)*100));
+  return `<div class="why"><h4>How you'd get there · time budget ~${fmtH(r.tol)} one-way ${E()}</h4>
+    <ul>${opts.map(o=>`<li style="border-bottom:1px dashed var(--mist)">
+      <button class="chip ${o.label===sel.label?'on':''}" style="padding:6px 12px;font-size:12.5px;margin-right:8px"
+        onclick="S.modeSel['${esc(ckey(c))}']='${esc(o.label)}';refresh()">${MLAB[o.mo]||"·"} ${esc(o.label)}</button>
+      ~${fmtH(o.h)} door-to-door${o.effH!==o.h?` (<b>${fmtH(o.effH)}</b> of it awake)`:""} · ${fxTo(o.cost[0],o.cost[1])}
+      ${o.nightsSaved?` · <b>saves ${o.nightsSaved} hotel night${o.nightsSaved>1?"s":""}</b>`:""}
+      ${o.note?`<small style="display:block;color:var(--ink-soft)">${esc(o.note)}</small>`:""}</li>`).join("")}</ul>
+    <p class="est-note">Uses your ${sel.effH<=r.tol?"":"(exceeded) "}travel-time budget: ${fmtH(sel.effH)} of ~${fmtH(r.tol)} (${pct}%). Distance-band rules apply in-land only; sea/overseas defaults to air. Tap a mode — score and budget follow it.</p></div>`;
+}
+function linksHTML(c){
+  return `<hr style="border:0;border-top:1px solid var(--mist);margin:26px 0 22px">
+    <div class="why"><h4>Make it real</h4>
+    <div style="display:flex;flex-wrap:wrap;gap:10px">${outLinks(c).map(([t,u])=>
+      `<a class="chip" style="text-decoration:none" href="${u}" target="_blank" rel="noopener">${t}</a>`).join("")}</div>
+    </div>`;
+}
+function renderDetail(ranked){
+  const r=ranked.find(x=>ckey(x.c)===S.sel),c=r.c,i=ranked.indexOf(r),x=explain(r,ranked);
+  const fb=S.feedback[ckey(c)];
+  const verdict=r.total>=75?"estimated to be an excellent choice":r.total>=60?"estimated to be a strong choice":r.total>=45?"a workable choice, with trade-offs":"probably not the right fit for these preferences";
+  const li=(arr,warn)=>arr.map(t=>`<li class="${warn?"warn":""}">${t}</li>`).join("")||"<li>Nothing notable.</li>";
+  $("detail").innerHTML=`
+    <div class="detail-hero"><div class="d-top">
+        <div><h2>${esc(c.n)}</h2><div class="cty">${esc(c.co)} · ${"$".repeat(c["$"])} · plan ${c.d}+ days${c.src==="wd"?' · <span class="badge-live">LIVE · WIKIDATA</span>':''} · ${MICON[c.mo]} ~${fmtH(c.h)} from ${esc(S.a.origin.name)}</div></div>
+        <span class="pick-badge">${i===0?"★ TOP PICK":`RANKED #${i+1}`}</span></div>
+      <p class="d-verdict"><span id="verdictTxt">Based on your preferences, real ${MONTHS[r.m]} weather, <b>${esc(c.n)}</b> is ${verdict}. An estimate you can interrogate — not a verdict.</span></p>
+      <div class="meter">
+        <div><div class="m-lab"><span>SUITABILITY</span><b>${r.total} pts</b></div><div class="bar"><i style="width:${Math.min(100,r.total)}%"></i></div></div>
+        <div><div class="m-lab"><span>CONFIDENCE</span><b>${confidence()}%</b></div><div class="bar amber"><i style="width:${confidence()}%"></i></div></div>
+      </div></div>
+    <div class="d-body">
+      ${holidayHTML(r)}
+      ${travelHTML(r)}
+      <div class="why"><h4>Why this</h4><ul>${li(x.this)}</ul></div>
+      <div class="why"><h4>Why ${MONTHS[r.m]}</h4><ul>${li(x.now)}</ul></div>
+      ${enrichHTML(c)}
+      <div class="why"><h4>Why you</h4><ul>${li(x.you)}</ul></div>
+      <div class="why"><h4>Why not the alternatives</h4><ul>${li(x.not)}</ul></div>
+      ${x.warn.length?`<div class="why"><h4>Heads-ups</h4><ul>${li(x.warn,true)}</ul></div>`:""}
+      <div class="why"><h4>How the score breaks down</h4><div class="breakdown">${r.parts.map(p=>`
+        <div class="bk-row"><span class="lbl">${p.label}</span>
+          <div class="bk-bar"><i class="${p.pts<0?"neg":""}" style="width:${Math.min(100,Math.abs(p.pts)/(p.max||10)*100)}%"></i></div>
+          <span class="pts">${p.pts>0?"+":""}${p.pts}</span></div>`).join("")}</div></div>
+      <div class="fb"><span>Teach Waypoint:</span>
+        <button class="${fb==="love"?"on":""}" onclick="giveFb('${esc(ckey(c))}','love')">♥ Love it</button>
+        <button class="${fb==="been"?"on":""}" onclick="giveFb('${esc(ckey(c))}','been')">✓ Been there</button>
+        <button class="${fb==="no"?"on":""}" onclick="giveFb('${esc(ckey(c))}','no')">✕ Not for me</button></div>
+      ${linksHTML(c)}
+
+    </div>`;
+}
+function giveFb(k,v){S.feedback[k]=S.feedback[k]===v?undefined:v;
+  if(!S.feedback[k])delete S.feedback[k];saveJSON("wp_fb2",S.feedback);refresh()}
+
+/* ---------- optional on-device SLM (Transformers.js + Qwen2.5-0.5B) ----------
+   100% local: downloads once from the HF CDN, cached by the browser; nothing
+   typed ever leaves the device. The app fully works without it. */
+const SLM={status:"idle",gen:null,note:""};
+function setProg(f){const el=document.querySelector("#magicCard .prog i");if(el)el.style.width=Math.round(f*100)+"%"}
+async function loadSLM(){
+  if(SLM.status==="loading"||SLM.status==="ready")return;
+  SLM.status="loading";renderMagic();
+  try{
+    if(window.__SLM_MOCK){SLM.gen=window.__SLM_MOCK}
+    else{
+      const T=await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3");
+      T.env.allowLocalModels=false;
+      let dev="wasm";try{if(navigator.gpu&&await navigator.gpu.requestAdapter())dev="webgpu"}catch(e){}
+      SLM.gen=await T.pipeline("text-generation","onnx-community/Qwen2.5-0.5B-Instruct",
+        {dtype:"q4",device:dev,progress_callback:p=>{if(p.status==="progress"&&p.total)setProg(p.loaded/p.total)}});
+    }
+    SLM.status="ready";
+  }catch(e){SLM.status="off";SLM.note="Couldn't load the on-device model here — everything else still works."}
+  renderMagic();
+}
+async function slmChat(sys,user,maxNew){
+  const out=await SLM.gen([{role:"system",content:sys},{role:"user",content:user}],
+    {max_new_tokens:maxNew||160,do_sample:false,return_full_text:false});
+  let t=out;if(Array.isArray(out))t=out[0]&&out[0].generated_text;
+  if(Array.isArray(t)){const last=t[t.length-1];t=last&&last.content}
+  return String(t||"");
+}
+const NOM_THEMES={hills:{be:1,na:9,cu:4,fo:6,ad:6,ni:2,fa:7,ca:9},beach:{be:9,na:6,cu:4,fo:6,ad:5,ni:5,fa:7,ca:8},
+  heritage:{be:1,na:4,cu:9,fo:6,ad:4,ni:3,fa:6,ca:6},wildlife:{be:1,na:9,cu:3,fo:4,ad:8,ni:1,fa:7,ca:7},
+  city:{be:2,na:3,cu:7,fo:8,ad:3,ni:7,fa:6,ca:4},lake:{be:3,na:8,cu:4,fo:5,ad:5,ni:2,fa:7,ca:9}};
+async function slmNominate(){
+  if(SLM.status!=="ready")return[];
+  const a=S.a,dr={ground:(S.radii&&S.radii[1])||900};
+  const sys='You suggest real, popular getaway destinations. Output ONLY a JSON array, no prose, no markdown.';
+  const user=`List up to 9 popular ${a.days||4}-day getaway destinations that locals of ${a.origin.name} actually go to (within ~${dr.ground} km overland or a short hop). Month: ${a.month==="flex"?"any":MONTHS[a.month]}. Prefer well-loved spots over famous cities. JSON: [{"n":"place name","type":"hills|beach|heritage|wildlife|city|lake"}]`;
+  let names=[];
+  try{names=extractJSON(await slmChat(sys,user,220))}catch(e){return[]}
+  if(!Array.isArray(names))return[];
+  const out=[];
+  for(const it of names.slice(0,9)){
+    const nm=it&&String(it.n||"").trim();if(!nm||nm.length>60)continue;
+    try{
+      const hit=(await geocode(nm+", "+a.origin.country))[0]||(await geocode(nm))[0];
+      if(!hit)continue;                                   // hallucinated → doesn't geocode → dropped
+      const gc=kmBetween(a.origin.ll,hit.ll);
+      if(gc<38||gc>dr.ground*1.45)continue;               // outside feasible reach → dropped
+      const t=NOM_THEMES[it.type]||NOM_THEMES.hills;
+      out.push({n:hit.name.split(",")[0],co:hit.country||a.origin.country,cc:hit.cc||a.origin.cc,
+        la:hit.ll[0],lo:hit.ll[1],d:gc<300?2:3,"$":TIER[hit.cc||a.origin.cc]||2,pk:[],src:"slm",
+        a:"Local favorite — suggested on-device, verified on the map",t:{...t}});
+      await new Promise(r=>setTimeout(r,180));            // polite to Nominatim
+    }catch(e){}
+  }
+  return out;
+}
+function renderMagic(){
+  const el=$("magicCard");if(!el)return;
+  if(SLM.status==="idle")el.innerHTML=`<div class="magic"><h4>✨ ON-DEVICE AI SCOUT · OPTIONAL</h4>
+    <p style="font-size:13.5px;margin-bottom:10px">Helps you <b>discover more places</b> — the local favorites that open datasets miss — and every suggestion is checked against the real map before it can appear. One download (~0.4 GB, cached), then it runs entirely in your browser.</p>
+    <button class="btn btn-primary" onclick="loadSLM()">Enable AI scout</button>
+    <button class="btn-ghost" style="color:#9FB6B0" onclick="this.closest('.magic').style.display='none'">No thanks</button></div>`;
+  else if(SLM.status==="loading")el.innerHTML=`<div class="magic"><h4>✨ DOWNLOADING MODEL — ONCE, THEN CACHED</h4><div class="prog"><i></i></div>
+    <p class="est-note" style="margin-top:8px">Qwen2.5-0.5B via Transformers.js · keep answering below meanwhile.</p></div>`;
+  else if(SLM.status==="ready")el.innerHTML=`<div class="magic"><h4>✨ AI SCOUT READY</h4>
+    <p class="est-note">Ready to help you discover more places, each one verified on the map. It runs on your device — nothing you enter is shared with us or anyone else.</p></div>`;
+  else el.innerHTML=`<div class="magic"><h4>✨ ON-DEVICE AI</h4><p class="est-note">${esc(SLM.note)}</p></div>`;
+}
+
+
+function shareLink(){
+  try{const p=btoa(unescape(encodeURIComponent(JSON.stringify({a:S.a}))));
+    const u=location.origin+location.pathname+"#w="+p;
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(u);
+    try{history.replaceState(null,"","#w="+p)}catch(e){}
+    alert("Share link copied — anyone opening it sees this exact board.");
+  }catch(e){alert("Couldn't create a share link in this environment.")}
+}
+window.addEventListener("load",()=>{ // opening a shared link skips intake and runs the pipeline
+  try{const m2=location.hash.match(/#w=(.+)/);
+    if(m2){const d=JSON.parse(decodeURIComponent(escape(atob(m2[1]))));
+      if(d.a&&d.a.origin&&d.a.origin.ll){S.a=d.a;runPipeline()}}}catch(e){}
+});
+
+/* ---------- world atlas: ~100 places, blended with live Wikidata finds ----------
+   [name, country, cc, lat, lon, minDays, $tier, peakMonths, angle, [be,na,cu,fo,ad,ni,fa,ca], festivals?] */
+const ATLAS=[
+["Lisbon","Portugal","PT",38.72,-9.14,4,3,[7,8],"Tiled hills and Atlantic light",[6,5,9,9,4,8,7,6],[[6,"Festas de Lisboa street festival"]]],
+["Porto","Portugal","PT",41.15,-8.61,3,2,[7,8],"Port cellars, azulejos, river sunsets",[4,5,8,9,4,7,7,6],[[6,"São João midsummer night"]]],
+["Azores","Portugal","PT",37.74,-25.67,6,2,[7,8],"Crater lakes and hot springs",[5,10,5,7,8,3,7,10]],
+["Madeira","Portugal","PT",32.65,-16.91,5,3,[8,12],"Levada walks above the clouds",[5,9,5,7,7,4,7,9]],
+["Barcelona","Spain","ES",41.39,2.17,4,3,[7,8],"Gaudí plus a city beach",[7,4,9,9,3,9,7,4],[[9,"La Mercè festival"]]],
+["Seville","Spain","ES",37.39,-5.99,3,2,[4,5],"Flamenco courtyards and orange trees",[1,3,9,9,3,8,6,5],[[4,"Feria de Abril"]]],
+["Tenerife","Spain","ES",28.29,-16.63,5,3,[1,8],"Volcano hikes, winter sun",[8,8,4,6,7,6,8,7]],
+["Mallorca","Spain","ES",39.57,2.65,4,3,[7,8],"Turquoise calas and mountain villages",[9,7,5,7,5,7,8,6]],
+["Paris","France","FR",48.86,2.35,4,4,[6,7],"The museum city, endlessly walkable",[1,3,10,9,2,8,7,4]],
+["Nice & Riviera","France","FR",43.7,7.27,4,4,[7,8],"Belle-époque seafront, hilltop villages",[8,6,7,8,4,7,7,6]],
+["Provence","France","FR",43.95,4.81,4,3,[7],"Lavender fields and Roman towns",[2,7,8,9,4,4,7,8],[[7,"Avignon theatre festival"]]],
+["Rome","Italy","IT",41.9,12.5,4,4,[5,6,9],"Every corner is an era",[2,3,10,9,3,7,7,4]],
+["Florence & Tuscany","Italy","IT",43.77,11.26,4,4,[5,6,9],"Renaissance city, vineyard hills",[1,6,10,9,3,6,7,6]],
+["Venice","Italy","IT",45.44,12.32,3,4,[5,9],"Canals before the day-trippers wake",[2,3,10,8,2,5,6,5],[[2,"Carnevale"]]],
+["Amalfi Coast","Italy","IT",40.63,14.6,5,5,[6,7,8],"Cliff villages and lemon groves",[8,7,8,10,4,6,6,6]],
+["Sicily","Italy","IT",37.6,14.02,6,3,[7,8],"Temples, volcanoes, arancini",[7,7,9,9,6,5,7,6]],
+["Dolomites","Italy","IT",46.5,11.35,5,4,[7,8],"Pink granite peaks, rifugio hikes",[1,10,4,7,9,3,7,8]],
+["Athens","Greece","GR",37.98,23.73,3,3,[7,8],"Acropolis plus a modern food scene",[3,3,10,8,3,8,6,4]],
+["Santorini","Greece","GR",36.39,25.46,4,4,[7,8],"White villages over a caldera",[7,6,7,8,3,7,5,5]],
+["Crete","Greece","GR",35.24,24.81,6,3,[7,8],"Gorges, beaches, Minoan ruins",[9,8,8,8,7,6,8,7]],
+["Dubrovnik","Croatia","HR",42.65,18.09,4,3,[7,8],"Marble streets, clear Adriatic",[8,7,8,8,6,7,7,5]],
+["Split & islands","Croatia","HR",43.51,16.44,5,3,[7,8],"Roman palace, ferry-hop islands",[9,7,7,8,6,8,7,6]],
+["Lake Bled","Slovenia","SI",46.36,14.09,4,3,[7,8],"Alpine lake, fairy-tale island",[3,9,7,8,8,5,8,9]],
+["Vienna","Austria","AT",48.21,16.37,3,4,[12],"Coffeehouses and concert halls",[1,3,10,8,2,6,7,6],[[12,"Christmas markets"]]],
+["Prague","Czechia","CZ",50.09,14.42,3,2,[7,8,12],"Gothic spires, great beer",[1,3,10,7,3,8,7,5]],
+["Budapest","Hungary","HU",47.5,19.04,3,2,[7,8],"Thermal baths on the Danube",[1,3,9,8,3,9,6,6]],
+["Kraków","Poland","PL",50.06,19.94,3,2,[7,8],"Old town, sobering history nearby",[1,3,9,8,3,7,7,5]],
+["Berlin","Germany","DE",52.52,13.4,4,3,[7,8],"History, art squats, techno",[1,3,9,7,3,10,6,4]],
+["Munich & Bavaria","Germany","DE",48.14,11.58,4,4,[9,10],"Beer halls to castle alps",[1,7,8,8,5,7,8,6],[[9,"Oktoberfest"]]],
+["Amsterdam","Netherlands","NL",52.37,4.9,3,4,[4,7,8],"Canals, bikes, world-class museums",[1,3,9,7,3,9,7,5],[[4,"King's Day"]]],
+["Bruges","Belgium","BE",51.21,3.22,2,3,[7,12],"Medieval lace-and-chocolate storybook",[1,2,9,8,2,4,7,7]],
+["London","United Kingdom","GB",51.51,-0.13,4,5,[7,8],"Museums, markets, theatre",[1,3,10,8,3,9,8,4]],
+["Edinburgh","United Kingdom","GB",55.95,-3.19,3,4,[8],"Castle crag and festival city",[1,6,9,7,4,7,7,6],[[8,"Fringe Festival"]]],
+["Dublin","Ireland","IE",53.35,-6.26,3,4,[3,7,8],"Pubs, poets, wild coast nearby",[2,6,8,7,4,9,7,5],[[3,"St Patrick's Festival"]]],
+["Reykjavík & Ring Road","Iceland","IS",64.13,-21.9,7,5,[7,8],"Waterfalls, glaciers, volcanic coast",[2,10,6,6,9,5,6,8]],
+["Norwegian fjords","Norway","NO",60.39,5.32,6,5,[7,8],"Sea-cliff fjords, midnight light",[2,10,5,6,8,4,7,9]],
+["Stockholm","Sweden","SE",59.33,18.07,3,4,[7],"Archipelago city on fourteen islands",[3,6,8,7,4,7,7,6]],
+["Copenhagen","Denmark","DK",55.68,12.57,3,5,[7,8],"Design, harbor baths, pastries",[3,4,8,9,3,8,8,6]],
+["Interlaken & Jungfrau","Switzerland","CH",46.69,7.85,5,5,[7,8],"Trains into the clouds",[1,10,5,6,9,4,8,8]],
+["Istanbul","Türkiye","TR",41.01,28.98,4,2,[7,8],"Two continents, one bazaar",[2,3,10,10,4,8,6,4]],
+["Cappadocia","Türkiye","TR",38.64,34.83,3,2,[7,8],"Balloons over fairy chimneys",[1,9,8,7,7,3,7,7]],
+["Antalya coast","Türkiye","TR",36.9,30.7,5,2,[7,8],"Ruins meet turquoise water",[9,7,8,8,6,7,8,6]],
+["Malta","Malta","MT",35.9,14.51,4,3,[7,8],"Honey-stone islands, knightly history",[7,5,9,7,5,6,7,6]],
+["Kotor","Montenegro","ME",42.42,18.77,3,2,[7,8],"Fjord-like bay, Venetian walls",[7,8,8,7,6,5,7,7]],
+["Tokyo","Japan","JP",35.68,139.69,6,4,[3,4,11],"Food and neon forever",[1,4,9,10,5,10,8,3],[[3,"Cherry blossom"],[11,"Autumn leaves"]]],
+["Kyoto","Japan","JP",35.01,135.77,5,4,[3,4,11],"Temples, tea houses, kaiseki",[1,7,10,9,4,5,7,7],[[3,"Sakura season"],[7,"Gion Matsuri"]]],
+["Hokkaido","Japan","JP",43.06,141.35,6,4,[2,7],"Powder snow, summer flower fields",[2,9,5,9,8,5,7,8],[[2,"Sapporo Snow Festival"]]],
+["Okinawa","Japan","JP",26.21,127.68,5,4,[7,8],"Japan's coral-reef islands",[9,7,6,8,6,5,8,8]],
+["Seoul","South Korea","KR",37.57,126.98,5,3,[4,10],"Palaces to K-everything",[1,4,9,9,4,9,7,4]],
+["Jeju","South Korea","KR",33.5,126.53,4,3,[7,8],"Volcanic island of waterfalls",[8,9,5,8,6,4,8,8]],
+["Taipei","Taiwan","TW",25.03,121.57,4,3,[11,12],"Night markets, hot springs, gorges",[3,7,8,10,6,8,7,6]],
+["Hong Kong","Hong Kong","HK",22.32,114.17,4,4,[10,11],"Skyline, dim sum, hiking trails",[5,7,8,10,6,9,7,4]],
+["Beijing","China","CN",39.9,116.4,5,2,[5,10],"Imperial scale, Great Wall daytrips",[1,5,10,9,4,6,7,4]],
+["Shanghai","China","CN",31.23,121.47,4,3,[4,10],"Art-deco Bund to future skyline",[1,3,8,9,3,9,7,4]],
+["Guilin & Yangshuo","China","CN",25.27,110.29,4,2,[4,10],"Karst peaks over lazy rivers",[3,10,6,7,7,4,7,8]],
+["Hanoi","Vietnam","VN",21.03,105.85,4,1,[10,11],"Old-quarter buzz, pho at dawn",[1,4,9,10,4,7,6,4]],
+["Hội An","Vietnam","VN",16.05,108.2,4,1,[2,3],"Lantern-lit old town, great food",[7,6,9,10,5,5,7,8],[[2,"Lantern full-moon festivals"]]],
+["Ho Chi Minh City","Vietnam","VN",10.82,106.63,3,1,[12,1],"Mekong energy, rooftop nights",[1,3,7,10,4,9,6,3]],
+["Bangkok","Thailand","TH",13.76,100.5,4,1,[12,1],"Temples, canals, street-food capital",[1,3,8,10,4,9,7,3],[[4,"Songkran water festival"]]],
+["Chiang Mai","Thailand","TH",18.79,98.98,4,1,[11,12,1],"Old-city temples, mountain air",[1,7,9,9,6,6,8,8],[[11,"Yi Peng lantern festival"]]],
+["Phuket & Krabi","Thailand","TH",8.03,98.55,5,2,[12,1,2],"Limestone bays, island hops",[10,7,4,8,7,8,8,6]],
+["Siem Reap","Cambodia","KH",13.36,103.86,3,1,[12,1],"Angkor at sunrise",[1,6,10,7,5,6,7,6]],
+["Luang Prabang","Laos","LA",19.89,102.14,3,1,[11,12],"Monks, mist, Mekong calm",[1,7,9,7,5,3,7,9]],
+["Bali","Indonesia","ID",-8.41,115.19,7,2,[7,8],"Rice terraces, surf, temple culture",[9,9,8,7,7,7,7,8],[[3,"Nyepi day of silence"]]],
+["Lombok & Gilis","Indonesia","ID",-8.65,116.32,5,1,[7,8],"Bali's quieter, wilder neighbor",[9,9,4,6,8,5,7,8]],
+["Singapore","Singapore","SG",1.35,103.82,3,4,[6,12],"Garden city, hawker heaven",[3,5,7,10,3,8,9,5]],
+["Langkawi","Malaysia","MY",6.35,99.8,4,2,[12,1,2],"Duty-free island, mangrove karsts",[9,8,4,7,6,5,8,8]],
+["Palawan","Philippines","PH",11.2,119.4,6,1,[3,4],"Lagoons that don't look real",[10,9,3,6,8,4,7,8]],
+["Kathmandu & Pokhara","Nepal","NP",27.71,85.32,7,1,[10,11],"Himalayan gateways, living temples",[1,10,9,7,9,4,6,6],[[10,"Dashain festival"]]],
+["Ella & hill country","Sri Lanka","LK",6.87,81.05,6,1,[1,2],"Tea-train country, nine-arch views",[4,10,7,8,7,3,7,9]],
+["South coast Sri Lanka","Sri Lanka","LK",5.97,80.43,6,1,[1,2],"Whales, surf, colonial forts",[9,8,7,8,6,5,7,8]],
+["Maldives","Maldives","MV",4.19,73.53,5,5,[1,2,3],"One island, one reef",[10,8,3,6,5,2,7,10]],
+["Coorg · Madikeri","India","IN",12.42,75.74,2,2,[10,11,12,1],"Coffee estates in permanent mist",[1,9,5,7,6,2,7,9]],
+["Chikkamagaluru","India","IN",13.32,75.77,2,1,[10,11,12,1],"Karnataka's quiet coffee hills",[1,9,4,7,6,2,7,9]],
+["Ooty & Nilgiris","India","IN",11.41,76.7,2,2,[4,5,9,10],"Toy train through blue mountains",[1,8,5,6,5,3,8,8]],
+["Munnar","India","IN",10.09,77.06,3,2,[9,10,11,12],"Tea carpets above the clouds",[1,9,4,6,6,2,7,9]],
+["Wayanad","India","IN",11.61,76.08,2,1,[10,11,12],"Waterfalls, caves, spice forests",[1,9,5,7,7,2,7,8]],
+["Hampi","India","IN",15.34,76.46,2,1,[11,12,1],"A ruined empire among boulders",[1,4,10,6,5,2,6,7]],
+["Gokarna","India","IN",14.55,74.32,2,1,[11,12,1],"Goa's mellow little sibling",[9,6,6,6,5,4,5,8]],
+["Pondicherry","India","IN",11.93,79.83,3,2,[12,1,2],"French quarter by the Bay",[7,3,8,8,3,6,7,7]],
+["Mahabaleshwar","India","IN",17.92,73.66,2,2,[10,11,12,5],"Strawberry hills over the Ghats",[1,8,4,6,4,3,7,8]],
+["Mount Abu","India","IN",24.59,72.71,2,2,[11,12,1],"Rajasthan's only hill station",[1,7,6,6,4,3,7,8]],
+["Mussoorie","India","IN",30.46,78.07,3,2,[5,6,10],"The Queen of Hills, Himalaya views",[1,8,5,6,5,4,7,7]],
+["Goa","India","IN",15.3,74.12,4,1,[12,1],"Susegad beaches, Portuguese lanes",[9,6,6,8,5,8,7,7],[[12,"Sunburn & Christmas season"]]],
+["Kerala backwaters","India","IN",9.5,76.34,5,1,[12,1],"Houseboats through palm canals",[7,9,8,9,5,3,8,9],[[8,"Onam"]]],
+["Jaipur","India","IN",26.91,75.79,3,1,[11,12,1],"Pink city forts and bazaars",[1,3,10,8,4,5,7,5],[[1,"Jaipur Literature Festival"]]],
+["Udaipur","India","IN",24.58,73.71,3,1,[11,12,1],"Lake palaces at golden hour",[1,6,9,8,4,5,7,8]],
+["Leh–Ladakh","India","IN",34.15,77.58,7,1,[7,8],"High-altitude moonscapes, monasteries",[1,10,8,6,10,2,4,8],[[7,"Hemis festival"]]],
+["Rishikesh","India","IN",30.09,78.27,3,1,[10,11,3],"Ganga ghats, yoga, rapids",[1,8,8,6,8,3,6,9],[[3,"International Yoga Festival"]]],
+["Andaman Islands","India","IN",11.62,92.73,6,1,[12,1],"India's clearest water",[10,8,4,6,7,3,7,9]],
+["Darjeeling","India","IN",27.04,88.26,4,1,[10,11,4],"Toy train, tea, Kanchenjunga",[1,9,7,7,5,3,7,8]],
+["Varanasi","India","IN",25.32,83.01,3,1,[11,12],"The eternal city on the Ganga",[1,2,10,8,3,4,5,5],[[11,"Dev Deepawali"]]],
+["Agra","India","IN",27.18,78.02,2,1,[11,12,1],"The Taj at first light",[1,2,10,7,2,3,7,4]],
+["Tbilisi","Georgia","GE",41.72,44.79,5,2,[6,9],"Visa-easy Caucasus food capital",[1,8,9,9,6,7,5,6]],
+["Samarkand","Uzbekistan","UZ",39.65,66.96,4,1,[4,5,9],"Silk Road turquoise domes",[1,4,10,7,4,3,6,6]],
+["Almaty","Kazakhstan","KZ",43.24,76.89,5,2,[7,8],"Big mountains, low prices",[1,9,6,7,8,6,6,7]],
+["Dubai","UAE","AE",25.2,55.27,4,4,[12,1,2],"Desert future-city spectacle",[7,4,5,8,7,8,8,4]],
+["Muscat","Oman","OM",23.59,58.41,5,3,[11,12,1],"Fjords of Arabia, wadi swims",[7,9,7,7,7,3,7,8]],
+["Petra & Wadi Rum","Jordan","JO",30.33,35.44,5,3,[3,4,10],"Rose-red city, desert stars",[4,9,10,7,8,2,6,7]],
+["Jerusalem","Israel","IL",31.78,35.22,4,4,[4,10],"Layered millennia in one square mile",[2,4,10,8,3,5,6,4]],
+["Cairo & Giza","Egypt","EG",30.04,31.24,4,1,[11,12,1],"Pyramids on the horizon",[2,3,10,7,4,5,6,3]],
+["Luxor","Egypt","EG",25.69,32.64,3,1,[11,12,1],"Open-air museum of the pharaohs",[1,3,10,6,4,3,6,5]],
+["Marrakech","Morocco","MA",31.63,-8.01,4,2,[3,4,10],"Souks, riads, Atlas backdrop",[2,6,10,9,6,5,5,4]],
+["Fes","Morocco","MA",34.03,-5.0,3,1,[3,4,10],"The medieval medina, unfiltered",[1,3,10,8,4,3,5,4]],
+["Cape Town","South Africa","ZA",-33.92,18.42,7,2,[12,1,2],"Mountain, penguins, wine country",[8,10,7,9,8,7,6,6]],
+["Kruger safari","South Africa","ZA",-24.99,31.59,5,3,[6,7,8,9],"Big Five from your stoep",[1,10,3,6,8,2,7,7]],
+["Zanzibar","Tanzania","TZ",-6.16,39.19,6,2,[7,8,12],"Spice-island beaches, Stone Town",[10,7,8,8,5,5,7,8]],
+["Masai Mara","Kenya","KE",-1.49,35.14,6,3,[7,8,9],"The migration in motion",[1,10,4,5,9,2,7,6],[[8,"Great Migration river crossings"]]],
+["Mauritius","Mauritius","MU",-20.35,57.55,6,3,[10,11,12],"Reef lagoons, Creole flavors",[10,8,5,8,6,5,8,8]],
+["New York City","United States","US",40.71,-74.01,5,5,[9,10,12],"The city that benchmarks cities",[2,3,9,9,4,10,7,3]],
+["Hawaii · Oahu","United States","US",21.31,-157.86,6,5,[6,7,12],"Volcano peaks to Waikiki",[10,9,5,7,8,6,8,7]],
+["Banff & Lake Louise","Canada","CA",51.18,-115.57,6,4,[7,8],"Turquoise lakes, glacier peaks",[1,10,3,6,9,3,8,8]],
+["Vancouver","Canada","CA",49.28,-123.12,4,4,[7,8],"Mountains meet Pacific city",[4,8,6,9,6,7,8,6]],
+["Mexico City","Mexico","MX",19.43,-99.13,4,2,[11,3],"Altitude, murals, mezcal",[1,3,9,10,4,8,6,4],[[11,"Día de Muertos"]]],
+["Tulum & Riviera Maya","Mexico","MX",20.21,-87.46,5,3,[12,1,2,3],"Cenotes, ruins, white sand",[10,7,7,8,6,7,7,7]],
+["Oaxaca","Mexico","MX",17.06,-96.72,4,2,[7,11],"Mole, mezcal, markets",[3,6,10,10,5,6,6,6],[[7,"Guelaguetza"],[11,"Día de Muertos"]]],
+["Costa Rica","Costa Rica","CR",9.93,-84.08,7,3,[12,1,2,3],"Sloths, volcanoes, two coastlines",[8,10,5,6,10,5,8,7]],
+["Cartagena","Colombia","CO",10.39,-75.51,4,2,[12,1],"Walled city color, Caribbean heat",[7,4,9,8,4,8,6,5]],
+["Cusco & Machu Picchu","Peru","PE",-13.53,-71.97,6,2,[6,7,8],"The Inca heartland",[1,9,10,8,8,5,6,5],[[6,"Inti Raymi sun festival"]]],
+["Rio de Janeiro","Brazil","BR",-22.91,-43.17,5,2,[2,12,1],"Beach city between granite peaks",[9,8,7,8,6,10,6,4],[[2,"Carnival"]]],
+["Iguazú Falls","Brazil","BR",-25.69,-54.44,3,2,[3,4,9],"A waterfall the size of weather",[1,10,3,6,6,3,7,6]],
+["Buenos Aires","Argentina","AR",-34.6,-58.38,4,2,[10,11,3],"Tango, steak, faded grandeur",[1,3,9,9,3,9,6,5]],
+["Patagonia","Argentina","AR",-50.34,-72.26,9,3,[12,1,2],"Granite towers, glaciers, wind",[1,10,4,6,10,2,4,9]],
+["Atacama Desert","Chile","CL",-22.91,-68.2,4,3,[10,11,4],"Mars with better stargazing",[1,10,4,6,8,3,6,8]],
+["Galápagos","Ecuador","EC",-0.74,-90.32,7,5,[6,7,12],"Evolution's showroom",[8,10,4,5,8,1,7,8]],
+["Sydney","Australia","AU",-33.87,151.21,5,4,[12,1],"Harbor life, surf suburbs",[8,6,7,8,6,8,8,5],[[1,"Sydney Festival"]]],
+["Great Barrier Reef · Cairns","Australia","AU",-16.92,145.77,5,4,[6,7,8],"The reef, the rainforest",[9,10,3,6,9,5,8,7]],
+["Queenstown","New Zealand","NZ",-45.03,168.66,7,4,[12,1,2],"Fjords, bungy, alpine lakes",[3,10,4,7,10,6,7,7]],
+["Rotorua & North Island","New Zealand","NZ",-38.14,176.25,6,4,[12,1],"Geysers, Māori culture, hobbits",[4,9,7,7,8,4,8,7]],
+["Fiji","Fiji","FJ",-17.71,178.07,6,3,[7,8],"Soft-coral reefs, softer pace",[10,8,4,6,6,4,8,9]]];
+function atlasCands(){
+  const o=S.a.origin.ll;
+  return ATLAS.map(([n,co,cc,la,lo,d,cost,pk,a,t,fe])=>{
+    const km=kmBetween(o,[la,lo])*1.25;
+    const mo=km<=650?"drive":km<=1000?"train":"fly";
+    const h=mo==="fly"?Math.round((0.9+km/1.25/830+(km>11000?1.8:0))*2)/2:Math.round(km/(mo==="drive"?72:95)*2)/2;
+    return{n,co,cc,la,lo,d,"$":cost,pk,a,fe,mo,h,src:"atlas",
+      t:{be:t[0],na:t[1],cu:t[2],fo:t[3],ad:t[4],ni:t[5],fa:t[6],ca:t[7]}}});
+}
+</script>
+</body>
+</html>
